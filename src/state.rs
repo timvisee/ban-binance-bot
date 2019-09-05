@@ -58,7 +58,7 @@ impl State {
 /// The inner state.
 struct StateInner {
     /// A handle to the reactor.
-    handle: Handle,
+    _handle: Handle,
 }
 
 impl StateInner {
@@ -67,8 +67,6 @@ impl StateInner {
     /// This initializes the inner state.
     /// Internally this connects to the bot database.
     pub fn init(handle: Handle) -> StateInner {
-        StateInner {
-            handle,
-        }
+        StateInner { _handle: handle }
     }
 }

@@ -23,7 +23,7 @@ When the bot is added to a group, all content is scanned for Binance promotions.
 
 The bot currently scans for illegal content, including:
 - links going to Binance promotions
-- pictures containing a Binance promotion
+- files (pictures, GIFs, stickers, ...) containing a Binance promotion
 
 When illegal content is found:
 - the user is immediately banned from the chat

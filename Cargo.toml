@@ -1,8 +1,17 @@
 [package]
 name = "ban-binance-bot"
+description = "A Telegram bot to ban users advertising Binance promotions."
 version = "0.1.0"
 authors = ["timvisee <tim@visee.me>"]
 edition = "2018"
+homepage = "https://gitlab.com/timvisee/ban-binance-bot"
+repository = "https://gitlab.com/timvisee/ban-binance-bot"
+keywords = ["telegram-bot", "spam-filtering"]
+readme = "README.md"
+license = "GPL-3.0"
+
+[badges]
+gitlab = { repository = "timvisee/ban-binance-bot", branch = "master" }
 
 [dependencies]
 dotenv = "0.14"

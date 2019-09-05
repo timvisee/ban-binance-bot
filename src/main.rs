@@ -7,19 +7,16 @@ use std::path::Path;
 use std::time::Duration;
 
 use dotenv::dotenv;
-use dssim::{Dssim, ToRGBAPLU, RGBAPLU};
+use dssim::Dssim;
 use futures::{
     future::{ok, result},
     prelude::*,
     stream::iter_ok,
     Future, Stream,
 };
+use image::GenericImageView;
 use image::{imageops, FilterType};
-use image::{GenericImageView, Rgba};
-use imgref::ImgVec;
-use linkify::{LinkFinder, LinkKind};
-use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
-use rgb::RGBA;
+use reqwest::r#async::Client;
 use state::State;
 use telegram_bot::{types::Message, *};
 use tempfile::{Builder, TempPath};
@@ -27,19 +24,13 @@ use tokio_core::reactor::{Core, Handle};
 use tokio_signal::ctrl_c;
 use url::Url;
 
+use config::*;
 use traits::*;
 
+mod config;
 mod state;
 mod traits;
-
-/// A list of illegal URL hosts.
-const ILLEGAL_HOSTS: [&str; 3] = ["binance.mxevent.site", "mxevent.site", "binance.com"];
-
-/// The maximum file size in bytes of files to check for legality.
-const MAX_FILE_SIZE: i64 = 2 * 1024 * 1024;
-
-/// Images are illegal when their similarity to any template image is `<= threhold`.
-const IMAGE_BAN_THRESHOLD: f64 = 0.02;
+mod util;
 
 fn main() {
     // Load the environment variables file
@@ -68,8 +59,10 @@ fn main() {
             result(r)
         });
 
-    // Run the application future in the reactor
-    core.run(app).unwrap();
+    // Run the Telegram bot logic future in the reactor
+    let _ = core
+        .run(app)
+        .expect("an error occurred while running Telegram bot update loop");
 }
 
 /// Build a future for handling Telegram API updates.
@@ -131,7 +124,7 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
             // Ban users that send illegal messages
             if illegal {
                 // Build the message, keep a reference to the chat
-                let name = format_user_name(&msg.from);
+                let name = util::telegram::format_user_name(&msg.from);
                 let chat = msg.chat.clone();
 
                 // TODO: do not ignore error here
@@ -307,6 +300,8 @@ fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = ()> 
         path.to_str().unwrap_or("?"),
     );
 
+    // TODO: check status code
+
     client
         .get(url)
         .send()
@@ -361,12 +356,12 @@ fn is_illegal_image(image: &Path) -> impl Future<Item = bool, Error = ()> {
     // Create a DSSIM instance
     let mut dssim = Dssim::new();
 
-    let base_image = to_imgvec(&base_image);
+    let base_image = util::image::to_imgvec(&base_image);
     let base_image = dssim
         .create_image(&base_image)
         .expect("failed to load base image");
 
-    let image = to_imgvec(&image);
+    let image = util::image::to_imgvec(&image);
     let image = dssim.create_image(&image).expect("failed to load image");
 
     // Compare the images, obtain the score
@@ -383,34 +378,6 @@ fn is_illegal_image(image: &Path) -> impl Future<Item = bool, Error = ()> {
     ok(is_similar)
 }
 
-fn to_imgvec(input: &impl GenericImageView<Pixel = Rgba<u8>>) -> ImgVec<RGBAPLU> {
-    let pixels = input
-        .pixels()
-        .map(|(_x, _y, Rgba([r, g, b, a]))| RGBA::new(r, g, b, a))
-        .collect::<Vec<_>>()
-        .to_rgbaplu();
-    ImgVec::new(pixels, input.width() as usize, input.height() as usize)
-}
-
-/// List all URLs in the given text.
-fn find_urls(text: &str) -> Vec<Url> {
-    // Set up the URL finder
-    let mut finder = LinkFinder::new();
-    finder.kinds(&[LinkKind::Url]);
-
-    // Collect all links, parse them to URL
-    finder
-        .links(text)
-        .filter_map(|url| match Url::parse(url.as_str()) {
-            Ok(url) => Some(url),
-            Err(err) => {
-                eprintln!("Failed to parse URL: {:?}", err);
-                None
-            }
-        })
-        .collect()
-}
-
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
@@ -418,7 +385,7 @@ fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = ()>>
     // TODO: do a forwarding check, compare target URLs as well
 
     // Find URLs in the message
-    let urls = find_urls(text);
+    let urls = util::url::find_urls(text);
 
     // Scan for any static illegal URLs in the text message
     let illegal = urls.iter().any(is_illegal_url);
@@ -429,7 +396,7 @@ fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = ()>>
     // Resolve all URL forwards, and test for illegal URLs again
     let future = iter_ok(urls)
         // Filter URLs that are still the same
-        .and_then(|url| follow_url(&url))
+        .and_then(|url| util::url::follow_url(&url))
         .and_then(|url| ok(is_illegal_url(&url)))
         // TODO: do not map errors here
         .into_future()
@@ -453,79 +420,4 @@ fn is_illegal_url(url: &Url) -> bool {
     ILLEGAL_HOSTS
         .into_iter()
         .any(|illegal_host| illegal_host == &host)
-}
-
-/// Follow redirects on the given URL, and return the final full URL.
-///
-/// This is used to obtain share URLs from shortened links.
-///
-// TODO: extract this into module
-pub fn follow_url(url: &Url) -> impl Future<Item = Url, Error = FollowError> {
-    // Build the URL client
-    // TODO: use a global client instance
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)
-        .redirect(RedirectPolicy::limited(25))
-        .timeout(Duration::from_secs(60))
-        .connect_timeout(Duration::from_secs(60))
-        .build()
-        .expect("failed to build URL forward resolver client");
-
-    println!("Checking URL for redirects: {}", url.as_str());
-
-    // Send the request, follow the URL, ensure success
-    let response = client
-        .get(url.as_str())
-        .send()
-        .map_err(FollowError::Request);
-
-    // TODO: validate status !response.status.is_success()
-
-    // Obtain the final URL
-    response.map(|r| r.url().clone())
-}
-
-/// URL following error.
-#[derive(Debug)]
-pub enum FollowError {
-    /// Failed to send the shortening request.
-    // #[fail(display = "failed to send URL follow request")]
-    Request(reqwest::Error),
-
-    /// The server responded with a bad response.
-    // #[fail(display = "failed to shorten URL, got bad response")]
-    Response(ResponseError),
-}
-
-impl From<ResponseError> for FollowError {
-    fn from(err: ResponseError) -> Self {
-        FollowError::Response(err)
-    }
-}
-
-/// Format the name of a given Telegram user.
-///
-/// The output consists of:
-/// - A first name
-/// - A last name (if known)
-/// - Clickable name (if username is known)
-///
-/// The returned string should be sent with `.parse_mode(ParseMode::Markdown)` enabled.
-fn format_user_name(user: &User) -> String {
-    // Take the first name
-    let mut name = user.first_name.clone();
-
-    // Append the last name if known
-    if let Some(last_name) = &user.last_name {
-        name.push_str(" ");
-        name.push_str(last_name);
-    }
-
-    // Make clickable if username is known
-    if let Some(username) = &user.username {
-        name.insert(0, '[');
-        name.push_str(&format!("](https://t.me/{})", username));
-    }
-
-    name
 }
