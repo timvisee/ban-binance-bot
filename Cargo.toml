@@ -6,4 +6,7 @@ edition = "2018"
 
 [dependencies]
 dotenv = "0.14"
+futures = "0.1"
 telegram-bot = "0.6"
+tokio-core = "0.1"
+tokio-signal = "0.2"
