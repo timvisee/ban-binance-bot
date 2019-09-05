@@ -115,6 +115,12 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
                 let chat = &msg.chat;
 
                 // TODO: do not ignore error here
+                let kick_user = state
+                    .telegram_client()
+                    .send(msg.from.kick_from(&chat))
+                    .map_err(|_| ());
+
+                // TODO: do not ignore error here
                 let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ());
 
                 // TODO: do not ignore error here
@@ -132,7 +138,7 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
                     .map_err(|_| ());
 
                 // TODO: do not ignore error here
-                return Box::new(delete_msg.join(notify_msg).map(|_| ()));
+                return Box::new(kick_user.join(delete_msg.join(notify_msg)).map(|_| ()));
             }
 
             Box::new(ok(()))
