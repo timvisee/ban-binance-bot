@@ -83,9 +83,10 @@ fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item = ()
 
             // Process messages
             match update.kind {
-                UpdateKind::Message(msg) => {
-                    handle.spawn(handle_message(msg, state));
-                }
+                UpdateKind::Message(msg) => match &msg.chat {
+                    MessageChat::Private(..) => handle.spawn(handle_private(&state, &msg)),
+                    _ => handle.spawn(handle_message(msg, state)),
+                },
                 UpdateKind::EditedMessage(msg) => {
                     handle.spawn(handle_message(msg, state));
                 }
@@ -98,6 +99,25 @@ fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item = ()
             eprintln!("ERR: Telegram API updates loop error, ignoring: {}", err);
             ()
         })
+}
+
+/// Handle the given private/direct message.
+///
+/// This simply notifies the user that the bot is active, and doesn't really do anything else.
+fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Error = ()>> {
+    Box::new(
+        state
+            .telegram_client()
+            .send(
+                msg.text_reply(format!(
+                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n{}, add me to a group to start banning Binance promotion bots.",
+                    msg.from.first_name,
+                ))
+                .parse_mode(ParseMode::Markdown),
+            )
+            .map(|_| ())
+            .map_err(|_| ()),
+    )
 }
 
 /// Handle the given message.
