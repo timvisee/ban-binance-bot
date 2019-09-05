@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="533.3333333333333"
+   height="533.3333333333333"
+   version="1.1"
+   id="svg10"
+   sodipodi:docname="stop.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <metadata
+     id="metadata16">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs14" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1043"
+     id="namedview12"
+     showgrid="false"
+     inkscape:zoom="1.251579"
+     inkscape:cx="121.42083"
+     inkscape:cy="145.19534"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g8" />
+  <g
+     id="g8">
+    <title
+       id="title2">Layer 1</title>
+    <path
+       transform="rotate(46.02833938598633 274.13021850585926,262.1309204101563) "
+       id="path566"
+       d="m495.303802,262.130676c0,-125.226013 -99.022797,-226.741783 -221.173615,-226.741783c-122.150818,0 -221.173615,101.51577 -221.173615,226.741783c0.000046,125.226379 99.022888,226.742371 221.173737,226.74231c122.150818,-0.000031 221.173615,-101.516113 221.173553,-226.742493l-221.173676,0.000183l221.173615,0z"
+       stroke-width="37.1167"
+       stroke="#bf0000"
+       fill-rule="evenodd"
+       fill="none" />
+    <path
+       id="path575"
+       d="m445.611237,251.240189c0.032166,-115.39444 -93.835022,-208.957085 -209.637177,-208.957085c-115.80217,0 -209.669373,93.562645 -209.637207,208.957085c-0.000092,115.372086 93.857574,208.899734 209.636963,208.899857c115.779388,0.000092 209.637238,-93.527405 209.63736,-208.899475l-209.637115,-0.000381l209.637177,0z"
+       stroke-width="1pt"
+       fill-rule="evenodd"
+       fill="none" />
+    <path
+       id="path567"
+       d="m112.200783,91.059654l292.310997,307.074501"
+       stroke-width="37.5"
+       stroke="#bf0000"
+       fill-rule="evenodd"
+       fill="none" />
+  </g>
+</svg>
