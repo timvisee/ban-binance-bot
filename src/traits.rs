@@ -92,7 +92,7 @@ impl MessageGetFiles for Message {
 impl MessageGetFiles for MessageKind {
     fn files<'a>(&'a self) -> Option<Vec<GetFile>> {
         match self {
-            MessageKind::Text { data, .. } => None,
+            MessageKind::Text { .. } => None,
             MessageKind::Audio { data } => Some(vec![data.get_file()]),
             MessageKind::Document { data, .. } => Some(vec![data.get_file()]),
             MessageKind::Photo { data, .. } => Some(data
@@ -104,12 +104,12 @@ impl MessageGetFiles for MessageKind {
             MessageKind::Video { data, .. } => Some(vec![data.get_file()]),
             MessageKind::Voice { data } => Some(vec![data.get_file()]),
             MessageKind::VideoNote { data } => Some(vec![data.get_file()]),
-            MessageKind::Contact { data } => None,
+            MessageKind::Contact { .. } => None,
             MessageKind::Location { .. } => None,
-            MessageKind::Venue { data } => None,
+            MessageKind::Venue { .. } => None,
             MessageKind::NewChatMembers { .. } => None,
             MessageKind::LeftChatMember { .. } => None,
-            MessageKind::NewChatTitle { data } => None,
+            MessageKind::NewChatTitle { .. } => None,
             MessageKind::NewChatPhoto { data } => Some(data
                 .into_iter()
                 .map(|f| f.get_file())

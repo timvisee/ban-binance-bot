@@ -6,11 +6,18 @@ edition = "2018"
 
 [dependencies]
 dotenv = "0.14"
+dssim = "2.9"
 futures = "0.1"
+image = "0.22"
+imgref = "1.4"
 lazy_static = "1.4"
 linkify = "0.4"
 reqwest = "0.9"
+rgb = "0.8"
+tempfile = "3.1"
 tokio-core = "0.1"
+tokio-fs = "0.1"
+tokio-io = "0.1"
 tokio-signal = "0.2"
 url = "1.2"
 

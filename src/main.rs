@@ -1,22 +1,28 @@
+// TODO: filter too large files, limit to 20MB
+// TODO: filter too small images
+
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 use std::time::Duration;
 
 use dotenv::dotenv;
+use dssim::{Dssim, ToRGBAPLU, RGBAPLU};
 use futures::{
     future::{ok, result},
+    prelude::*,
     stream::iter_ok,
     Future, Stream,
 };
+use image::{imageops, FilterType};
+use image::{GenericImageView, Rgba};
+use imgref::ImgVec;
 use linkify::{LinkFinder, LinkKind};
-use reqwest::{
-    Error as ResponseError,
-    RedirectPolicy,
-    r#async::{Client},
-};
+use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
+use rgb::RGBA;
 use state::State;
-use telegram_bot::{
-    types::{Message},
-    *,
-};
+use telegram_bot::{types::Message, *};
+use tempfile::{Builder, TempPath};
 use tokio_core::reactor::{Core, Handle};
 use tokio_signal::ctrl_c;
 use url::Url;
@@ -27,14 +33,13 @@ mod state;
 mod traits;
 
 /// A list of illegal URL hosts.
-const ILLEGAL_HOSTS: [&str; 3] = [
-    "binance.mxevent.site",
-    "mxevent.site",
-    "binance.com",
-];
+const ILLEGAL_HOSTS: [&str; 3] = ["binance.mxevent.site", "mxevent.site", "binance.com"];
 
 /// The maximum file size in bytes of files to check for legality.
 const MAX_FILE_SIZE: i64 = 2 * 1024 * 1024;
+
+/// Images are illegal when their similarity to any template image is `<= threhold`.
+const IMAGE_BAN_THRESHOLD: f64 = 0.02;
 
 fn main() {
     // Load the environment variables file
@@ -101,27 +106,31 @@ fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item = ()
 fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error = ()>> {
     // TODO: do not clone, but reference
 
-    Box::new(
-        is_illegal_message(msg.clone(), state.clone())
-            .and_then(move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
-                // Ban users that send illegal messages
-                if illegal {
-                    // Build the message
-                    let name = msg.from.username.as_ref().unwrap_or(&msg.from.first_name);
+    Box::new(is_illegal_message(msg.clone(), state.clone()).and_then(
+        move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
+            // Ban users that send illegal messages
+            if illegal {
+                // Build the message
+                let name = msg.from.username.as_ref().unwrap_or(&msg.from.first_name);
 
-                    return Box::new(state
+                return Box::new(
+                    state
                         .telegram_client()
                         .send(
-                            msg.text_reply(format!("Banned `@{}` for posing Binance promotions", name))
-                                .parse_mode(ParseMode::Markdown),
+                            msg.text_reply(format!(
+                                "Banned `@{}` for posing Binance promotions",
+                                name
+                            ))
+                            .parse_mode(ParseMode::Markdown),
                         )
                         .map(|_| ())
-                        .map_err(|_| ()));
-                }
+                        .map_err(|_| ()),
+                );
+            }
 
-                Box::new(ok(()))
-            })
-    )
+            Box::new(ok(()))
+        },
+    ))
 }
 
 /// Check whether the given message is illegal.
@@ -137,13 +146,15 @@ fn is_illegal_message(msg: Message, state: State) -> Box<dyn Future<Item = bool,
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.files() {
-        future = Box::new(future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
-            if !illegal {
-                Box::new(has_illegal_files(files, state))
-            } else {
-                Box::new(ok(illegal))
-            }
-        }));
+        future = Box::new(
+            future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
+                if !illegal {
+                    Box::new(has_illegal_files(files, state))
+                } else {
+                    Box::new(ok(illegal))
+                }
+            }),
+        );
     }
 
     future
@@ -179,7 +190,8 @@ fn has_illegal_files(files: Vec<GetFile>, state: State) -> impl Future<Item = bo
 /// A `GetFile` request is given, as the actual file should still be downloaded.
 fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, Error = ()> {
     // Request the file from Telegram
-    let file_url = state.telegram_client()
+    let file_url = state
+        .telegram_client()
         .send_timeout(file, Duration::from_secs(30))
         // TODO: do not ignore error here
         .map_err(|_| ())
@@ -191,29 +203,140 @@ fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, Erro
         });
 
     // Test the file
-    file_url.and_then(|(file, url)| {
+    file_url.and_then(|(file, url)| -> Box<dyn Future<Item = _, Error = _>> {
         // Skip files that are too large
         match file.file_size {
-            Some(size) if size > MAX_FILE_SIZE => return ok(false),
-            _ => {},
+            Some(size) if size > MAX_FILE_SIZE => return Box::new(ok(false)),
+            _ => {}
         }
 
-        if url.ends_with("3.jpg") {
-            return ok(true);
+        // TODO: better extension test
+        if url.ends_with(".jpg") || url.ends_with(".jpeg") || url.ends_with(".png") {
+            return Box::new(download_temp(&url).and_then(|(_file, path)| is_illegal_image(&path)));
         }
 
         // TODO: remove after testing
-        // TODO: test the file
+
         eprintln!("TODO: Test file at: {}", url);
 
-        ok(false)
+        Box::new(ok(false))
     })
 }
 
+/// Download a file at the given URL to a temporary file on the system.
+/// The downloaded file and path is returned.
+///
+/// The actual downloaded file is automatically deleted from disk when the last file handle
+/// (`File`) is dropped. See `tempfile::NamedTempFile` for more details.
+// TODO: make this properly async, the download process isn't at this moment
+fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = ()> {
+    // Build the download client
+    // TODO: use a global client instance
+    let client = Client::builder()
+        .timeout(Duration::from_secs(60))
+        .connect_timeout(Duration::from_secs(60))
+        .build()
+        .expect("failed to build file downloading client");
+
+    // Get file name to suffix temporary downloaded file with
+    let name = url.split('/').last().unwrap_or("");;
+
+    // Create temporary file
+    let (file, path) = Builder::new()
+        .suffix(name)
+        .tempfile()
+        .expect("failed to create file for download")
+        .into_parts();
+
+    println!(
+        "Downloading '{}' to '{}'...",
+        url,
+        path.to_str().unwrap_or("?"),
+    );
+
+    client
+        .get(url)
+        .send()
+        // TODO: do not drop error here
+        .map_err(|err| {
+            dbg!(err);
+            ()
+        })
+        .and_then(|response| {
+            response
+                .into_body()
+                // TODO: do not drop error here
+                .map_err(|err| {
+                    dbg!(err);
+                    ()
+                })
+                .fold(file, |mut download, chunk| {
+                    download
+                        .write_all(&chunk)
+                        .into_future()
+                        .map(|_| download)
+                        .map_err(|err| {
+                            dbg!(err);
+                            ()
+                        })
+                })
+        })
+        .and_then(|file| {
+            // Force sync the file
+            // TODO: do not drop error here
+            file.sync_all().map(|_| file).map_err(|_| ())
+        })
+        .map(|file| (file, path))
+        .map_err(|_| {
+            eprintln!("CATCHED ERR!");
+            ()
+        })
+}
+
 /// Check whether the given image is illegal.
-fn is_illegal_image(image: Message) -> impl Future<Item = bool, Error = ()> {
-    // TODO: return proper answer here
-    ok(false)
+fn is_illegal_image(image: &Path) -> impl Future<Item = bool, Error = ()> {
+    eprintln!("Checking image...");
+
+    // Load the images
+    let base_image = image::open("./res/binance.jpg").expect("failed to open base");
+    let image = image::open(image).expect("failed to open downloaded image");
+
+    // Make the image we're testing the same size
+    let (x, y) = base_image.dimensions();
+    let image = imageops::resize(&image, x, y, FilterType::Triangle);
+
+    // Create a DSSIM instance
+    let mut dssim = Dssim::new();
+
+    let base_image = to_imgvec(&base_image);
+    let base_image = dssim
+        .create_image(&base_image)
+        .expect("failed to load base image");
+
+    let image = to_imgvec(&image);
+    let image = dssim.create_image(&image).expect("failed to load image");
+
+    // Compare the images, obtain the score
+    let result = dssim.compare(&base_image, image);
+    let score = result.0;
+    let is_similar = score <= IMAGE_BAN_THRESHOLD;
+
+    if is_similar {
+        println!("Illegal image! (score: {})", score);
+    } else {
+        println!("Allowed image (score: {})", score);
+    }
+
+    ok(is_similar)
+}
+
+fn to_imgvec(input: &impl GenericImageView<Pixel = Rgba<u8>>) -> ImgVec<RGBAPLU> {
+    let pixels = input
+        .pixels()
+        .map(|(_x, _y, Rgba([r, g, b, a]))| RGBA::new(r, g, b, a))
+        .collect::<Vec<_>>()
+        .to_rgbaplu();
+    ImgVec::new(pixels, input.width() as usize, input.height() as usize)
 }
 
 /// List all URLs in the given text.
@@ -230,7 +353,7 @@ fn find_urls(text: &str) -> Vec<Url> {
             Err(err) => {
                 eprintln!("Failed to parse URL: {:?}", err);
                 None
-            },
+            }
         })
         .collect()
 }
@@ -245,9 +368,7 @@ fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = ()>>
     let urls = find_urls(text);
 
     // Scan for any static illegal URLs in the text message
-    let illegal = urls
-        .iter()
-        .any(is_illegal_url);
+    let illegal = urls.iter().any(is_illegal_url);
     if illegal {
         return Box::new(ok(true));
     }
@@ -276,7 +397,9 @@ fn is_illegal_url(url: &Url) -> bool {
     };
     let host = host.trim().to_lowercase();
 
-    ILLEGAL_HOSTS.into_iter().any(|illegal_host| illegal_host == &host)
+    ILLEGAL_HOSTS
+        .into_iter()
+        .any(|illegal_host| illegal_host == &host)
 }
 
 /// Follow redirects on the given URL, and return the final full URL.
