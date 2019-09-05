@@ -9,7 +9,13 @@ dotenv = "0.14"
 futures = "0.1"
 lazy_static = "1.4"
 linkify = "0.4"
-telegram-bot = "0.6"
+reqwest = "0.9"
 tokio-core = "0.1"
 tokio-signal = "0.2"
-url = "2.0"
+url = "1.2"
+
+# Use a specific version with patched Telegram bot API
+[dependencies.telegram-bot]
+version = "*"
+git = "https://github.com/telegram-rs/telegram-bot"
+rev = "d82b179"
