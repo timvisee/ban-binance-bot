@@ -1,5 +1,4 @@
 [![Build status on GitLab CI][gitlab-ci-master-badge]][gitlab-ci-link]
-[![Project license][crate-license-badge]](LICENSE)
 
 [gitlab-ci-link]: https://gitlab.com/timvisee/ban-binance-bot/pipelines
 [gitlab-ci-master-badge]: https://gitlab.com/timvisee/ban-binance-bot/badges/master/pipeline.svg
