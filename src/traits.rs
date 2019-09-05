@@ -1,4 +1,13 @@
-use telegram_bot::types::{ChannelPost, Message, MessageKind, MessageOrChannelPost};
+use telegram_bot::{
+    types::{
+        requests::get_file::GetFile,
+        ChannelPost,
+        Message,
+        MessageKind,
+        MessageOrChannelPost,
+    },
+    prelude::CanGetFile,
+};
 
 /// A trait to obtain text from a message.
 pub trait MessageText {
@@ -56,5 +65,70 @@ impl MessageText for MessageKind {
 impl MessageText for ChannelPost {
     fn text<'a>(&'a self) -> Option<String> {
         self.kind.text()
+    }
+}
+
+/// A trait to obtain `GetFile` requests from a message.
+pub trait MessageGetFiles {
+    /// Obtain files from a message if available.
+    fn files<'a>(&'a self) -> Option<Vec<GetFile>>;
+}
+
+impl MessageGetFiles for MessageOrChannelPost {
+    fn files<'a>(&'a self) -> Option<Vec<GetFile>> {
+        match self {
+            MessageOrChannelPost::Message(msg) => msg.files(),
+            MessageOrChannelPost::ChannelPost(post) => post.files(),
+        }
+    }
+}
+
+impl MessageGetFiles for Message {
+    fn files<'a>(&'a self) -> Option<Vec<GetFile>> {
+        self.kind.files()
+    }
+}
+
+impl MessageGetFiles for MessageKind {
+    fn files<'a>(&'a self) -> Option<Vec<GetFile>> {
+        match self {
+            MessageKind::Text { data, .. } => None,
+            MessageKind::Audio { data } => Some(vec![data.get_file()]),
+            MessageKind::Document { data, .. } => Some(vec![data.get_file()]),
+            MessageKind::Photo { data, .. } => Some(data
+                .into_iter()
+                .map(|f| f.get_file())
+                .collect()
+            ),
+            MessageKind::Sticker { data } => Some(vec![data.get_file()]),
+            MessageKind::Video { data, .. } => Some(vec![data.get_file()]),
+            MessageKind::Voice { data } => Some(vec![data.get_file()]),
+            MessageKind::VideoNote { data } => Some(vec![data.get_file()]),
+            MessageKind::Contact { data } => None,
+            MessageKind::Location { .. } => None,
+            MessageKind::Venue { data } => None,
+            MessageKind::NewChatMembers { .. } => None,
+            MessageKind::LeftChatMember { .. } => None,
+            MessageKind::NewChatTitle { data } => None,
+            MessageKind::NewChatPhoto { data } => Some(data
+                .into_iter()
+                .map(|f| f.get_file())
+                .collect()
+            ),
+            MessageKind::DeleteChatPhoto => None,
+            MessageKind::GroupChatCreated => None,
+            MessageKind::SupergroupChatCreated => None,
+            MessageKind::ChannelChatCreated => None,
+            MessageKind::MigrateToChatId { .. } => None,
+            MessageKind::MigrateFromChatId { .. } => None,
+            MessageKind::PinnedMessage { .. } => None,
+            MessageKind::Unknown { .. } => None,
+        }
+    }
+}
+
+impl MessageGetFiles for ChannelPost {
+    fn files<'a>(&'a self) -> Option<Vec<GetFile>> {
+        self.kind.files()
     }
 }

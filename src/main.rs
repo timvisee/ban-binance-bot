@@ -33,6 +33,9 @@ const ILLEGAL_HOSTS: [&str; 3] = [
     "binance.com",
 ];
 
+/// The maximum file size in bytes of files to check for legality.
+const MAX_FILE_SIZE: i64 = 2 * 1024 * 1024;
+
 fn main() {
     // Load the environment variables file
     dotenv().ok();
@@ -99,14 +102,18 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
     // TODO: do not clone, but reference
 
     Box::new(
-        is_illegal_message(msg.clone())
+        is_illegal_message(msg.clone(), state.clone())
             .and_then(move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
                 // Ban users that send illegal messages
                 if illegal {
+                    // Build the message
+                    let name = msg.from.username.as_ref().unwrap_or(&msg.from.first_name);
+
                     return Box::new(state
                         .telegram_client()
                         .send(
-                            msg.text_reply("Banned user for posing Binance promotions"),
+                            msg.text_reply(format!("Banned `@{}` for posing Binance promotions", name))
+                                .parse_mode(ParseMode::Markdown),
                         )
                         .map(|_| ())
                         .map_err(|_| ()));
@@ -118,7 +125,7 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
 }
 
 /// Check whether the given message is illegal.
-fn is_illegal_message(msg: Message) -> Box<dyn Future<Item = bool, Error = ()>> {
+fn is_illegal_message(msg: Message, state: State) -> Box<dyn Future<Item = bool, Error = ()>> {
     // TODO: run check futures concurrently
 
     let mut future: Box<dyn Future<Item = _, Error = _>> = Box::new(ok(false));
@@ -128,14 +135,16 @@ fn is_illegal_message(msg: Message) -> Box<dyn Future<Item = bool, Error = ()>> 
         future = Box::new(future.and_then(|_| is_illegal_text(text)));
     }
 
-    // Check for any images
-    future = Box::new(future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
-        if !illegal {
-            Box::new(is_illegal_image(msg))
-        } else {
-            Box::new(ok(illegal))
-        }
-    }));
+    // Check message files (pictures, stickers, files, ...)
+    if let Some(files) = msg.files() {
+        future = Box::new(future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
+            if !illegal {
+                Box::new(has_illegal_files(files, state))
+            } else {
+                Box::new(ok(illegal))
+            }
+        }));
+    }
 
     future
 }
@@ -144,6 +153,61 @@ fn is_illegal_message(msg: Message) -> Box<dyn Future<Item = bool, Error = ()>> 
 fn is_illegal_text(text: String) -> impl Future<Item = bool, Error = ()> {
     // Check for illegal URLs
     contains_illegal_urls(&text)
+}
+
+/// Check whether any of the given files is illegal.
+///
+/// A list of `GetFile` requests is given, as the actual files should still be downloaded.
+fn has_illegal_files(files: Vec<GetFile>, state: State) -> impl Future<Item = bool, Error = ()> {
+    // TODO: reverse list of files here (pick biggest image first)?
+
+    // Test all files in order, return if any is illegal
+    iter_ok(files)
+        // TODO: do not clone state here
+        .and_then(move |file| is_illegal_file(file, state.clone()))
+        .filter(|illegal| *illegal)
+        .into_future()
+        .map(|(illegal, _)| match illegal {
+            Some(illegal) => illegal,
+            None => false,
+        })
+        .map_err(|(err, _)| err)
+}
+
+/// Check whether the given file is illegal.
+///
+/// A `GetFile` request is given, as the actual file should still be downloaded.
+fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, Error = ()> {
+    // Request the file from Telegram
+    let file_url = state.telegram_client()
+        .send_timeout(file, Duration::from_secs(30))
+        // TODO: do not ignore error here
+        .map_err(|_| ())
+        .and_then(|file| file.ok_or(()))
+        .map(move |file| {
+            // TODO: do not error here
+            let url = file.get_url(state.token()).expect("failed to get file URL");
+            (file, url)
+        });
+
+    // Test the file
+    file_url.and_then(|(file, url)| {
+        // Skip files that are too large
+        match file.file_size {
+            Some(size) if size > MAX_FILE_SIZE => return ok(false),
+            _ => {},
+        }
+
+        if url.ends_with("3.jpg") {
+            return ok(true);
+        }
+
+        // TODO: remove after testing
+        // TODO: test the file
+        eprintln!("TODO: Test file at: {}", url);
+
+        ok(false)
+    })
 }
 
 /// Check whether the given image is illegal.
@@ -230,6 +294,8 @@ pub fn follow_url(url: &Url) -> impl Future<Item = Url, Error = FollowError> {
         .connect_timeout(Duration::from_secs(60))
         .build()
         .expect("failed to build URL forward resolver client");
+
+    println!("Checking URL for redirects: {}", url.as_str());
 
     // Send the request, follow the URL, ensure success
     let response = client
