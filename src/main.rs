@@ -112,33 +112,49 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
             if illegal {
                 // Build the message, keep a reference to the chat
                 let name = format_user_name(&msg.from);
-                let chat = &msg.chat;
+                let chat = msg.chat.clone();
 
                 // TODO: do not ignore error here
-                let kick_user = state
-                    .telegram_client()
-                    .send(msg.from.kick_from(&chat))
-                    .map_err(|_| ());
+                let kick_user = state.telegram_client().send(msg.from.kick_from(&chat));
 
-                // TODO: do not ignore error here
-                let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ());
+                let future = kick_user.then(move |result| {
+                    // Check whether we failed to delete
+                    let failed = result.is_err();
 
-                // TODO: do not ignore error here
-                let notify_msg = state
-                    .telegram_client()
-                    .send(
-                        chat.text(format!(
-                            "Automatically banned {} for posing Binance promotions",
+                    // TODO: do not ignore error here
+                    let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ());
+
+                    // Build the notification to share in the chat
+                    let notification = if failed {
+                        format!(
+                            "An administrator should ban {} for posing Binance promotions.\n\n\
+                            Add this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+                            Administrators are never banned automatically.",
                             name,
-                        ))
-                        .parse_mode(ParseMode::Markdown)
-                        .disable_preview()
-                        .disable_notification(),
-                    )
-                    .map_err(|_| ());
+                        )
+                    } else {
+                        format!(
+                            "Automatically banned {} for posing Binance promotions.",
+                            name,
+                        )
+                    };
+
+                    // TODO: do not ignore error here
+                    let notify_msg = state
+                        .telegram_client()
+                        .send(
+                            chat.text(notification)
+                                .parse_mode(ParseMode::Markdown)
+                                .disable_preview()
+                                .disable_notification(),
+                        )
+                        .map_err(|_| ());
+
+                    delete_msg.join(notify_msg).map(|_| ())
+                });
 
                 // TODO: do not ignore error here
-                return Box::new(kick_user.join(delete_msg.join(notify_msg)).map(|_| ()));
+                return Box::new(future);
             }
 
             Box::new(ok(()))
