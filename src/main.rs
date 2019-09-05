@@ -110,22 +110,29 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
         move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
             // Ban users that send illegal messages
             if illegal {
-                // Build the message
-                let name = msg.from.username.as_ref().unwrap_or(&msg.from.first_name);
+                // Build the message, keep a reference to the chat
+                let name = format_user_name(&msg.from);
+                let chat = &msg.chat;
 
-                return Box::new(
-                    state
-                        .telegram_client()
-                        .send(
-                            msg.text_reply(format!(
-                                "Banned `@{}` for posing Binance promotions",
-                                name
-                            ))
-                            .parse_mode(ParseMode::Markdown),
-                        )
-                        .map(|_| ())
-                        .map_err(|_| ()),
-                );
+                // TODO: do not ignore error here
+                let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ());
+
+                // TODO: do not ignore error here
+                let notify_msg = state
+                    .telegram_client()
+                    .send(
+                        chat.text(format!(
+                            "Automatically banned {} for posing Binance promotions",
+                            name,
+                        ))
+                        .parse_mode(ParseMode::Markdown)
+                        .disable_preview()
+                        .disable_notification(),
+                    )
+                    .map_err(|_| ());
+
+                // TODO: do not ignore error here
+                return Box::new(delete_msg.join(notify_msg).map(|_| ()));
             }
 
             Box::new(ok(()))
@@ -169,8 +176,12 @@ fn is_illegal_text(text: String) -> impl Future<Item = bool, Error = ()> {
 /// Check whether any of the given files is illegal.
 ///
 /// A list of `GetFile` requests is given, as the actual files should still be downloaded.
-fn has_illegal_files(files: Vec<GetFile>, state: State) -> impl Future<Item = bool, Error = ()> {
+fn has_illegal_files(
+    mut files: Vec<GetFile>,
+    state: State,
+) -> impl Future<Item = bool, Error = ()> {
     // TODO: reverse list of files here (pick biggest image first)?
+    files.reverse();
 
     // Test all files in order, return if any is illegal
     iter_ok(files)
@@ -448,4 +459,31 @@ impl From<ResponseError> for FollowError {
     fn from(err: ResponseError) -> Self {
         FollowError::Response(err)
     }
+}
+
+/// Format the name of a given Telegram user.
+///
+/// The output consists of:
+/// - A first name
+/// - A last name (if known)
+/// - Clickable name (if username is known)
+///
+/// The returned string should be sent with `.parse_mode(ParseMode::Markdown)` enabled.
+fn format_user_name(user: &User) -> String {
+    // Take the first name
+    let mut name = user.first_name.clone();
+
+    // Append the last name if known
+    if let Some(last_name) = &user.last_name {
+        name.push_str(" ");
+        name.push_str(last_name);
+    }
+
+    // Make clickable if username is known
+    if let Some(username) = &user.username {
+        name.insert(0, '[');
+        name.push_str(&format!("](https://t.me/{})", username));
+    }
+
+    name
 }
