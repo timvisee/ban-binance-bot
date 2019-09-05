@@ -331,7 +331,7 @@ fn is_illegal_image(image: &Path) -> impl Future<Item = bool, Error = ()> {
     eprintln!("Checking image...");
 
     // Load the images
-    let base_image = image::open("./res/binance.jpg").expect("failed to open base");
+    let base_image = image::open("./res/illegal/binance.jpg").expect("failed to open base");
     let image = image::open(image).expect("failed to open downloaded image");
 
     // Make the image we're testing the same size

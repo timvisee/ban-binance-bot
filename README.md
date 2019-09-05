@@ -21,7 +21,7 @@ message is removed.
 ## How does it work?
 When the bot is added to a group, all content is scanned for Binance promotions.
 
-The bot currently scans for:
+The bot currently scans for illegal content, including:
 - links going to Binance promotions
 - pictures containing a Binance promotion
 
@@ -51,13 +51,13 @@ I host a public instance of this bot which you can use in your own groups.
 
 You can always compile this bot yourself, to host your own instance.
 
-### Privacy statement
+### Privacy notice
 Once added to a group, this bot scans all following user messages to determine
 whether illegal content is posted. All links are visited to determine whether
-the link to any Binance related content. All files (photos, GIFs, ...) are
-downloaded and scanned for Binance content. All content is immediately deleted
-from the servers disk the bot is running on after scanning. This is an automated
-process with no user intervention.
+the link to any illegal content. All files (photos, GIFs, ...) are downloaded
+and scanned for illegal content. All content is immediately deleted from the
+servers disk the bot is running on after scanning. This is an automated process
+with no user intervention.
 
 ## License
 This project is licensed under the GNU GPL-3.0 license.
