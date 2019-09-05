@@ -1,3 +1,6 @@
+use dotenv::dotenv;
+
 fn main() {
-    println!("Hello, world!");
+    // Load the environment variables file
+    dotenv().ok();
 }

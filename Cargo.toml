@@ -5,3 +5,5 @@ authors = ["timvisee <tim@visee.me>"]
 edition = "2018"
 
 [dependencies]
+dotenv = "0.14"
+telegram-bot = "0.6"
