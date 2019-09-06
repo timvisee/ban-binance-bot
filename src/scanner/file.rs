@@ -1,17 +1,9 @@
 use std::time::Duration;
 
-use futures::{
-    future::ok,
-    stream::iter_ok,
-    Future, Stream,
-};
+use futures::{future::ok, stream::iter_ok, Future, Stream};
 use telegram_bot::*;
 
-use crate::{
-    config::*,
-    state::State,
-    util,
-};
+use crate::{config::*, state::State, util};
 
 /// Check whether any of the given files is illegal.
 ///
@@ -62,8 +54,15 @@ pub fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, 
         }
 
         // TODO: better extension test
-        if url.ends_with(".jpg") || url.ends_with(".jpeg") || url.ends_with(".png") {
-            return Box::new(util::download::download_temp(&url).and_then(|(_file, path)| super::image::is_illegal_image(&path)));
+        if url.ends_with(".jpg")
+            || url.ends_with(".jpeg")
+            || url.ends_with(".png")
+            || url.ends_with(".webp")
+        {
+            return Box::new(
+                util::download::download_temp(&url)
+                    .and_then(|(_file, path)| super::image::is_illegal_image(&path)),
+            );
         }
 
         // TODO: remove after testing

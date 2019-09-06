@@ -1,16 +1,8 @@
-use futures::{
-    future::ok,
-    Future, Stream,
-};
+use futures::{future::ok, Future, Stream};
 use telegram_bot::{types::Message, *};
 use tokio_core::reactor::Handle;
 
-use crate::{
-    scanner,
-    state::State,
-    traits::*,
-    util,
-};
+use crate::{scanner, state::State, traits::*, util};
 
 /// Build a future for handling Telegram API updates.
 pub fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item = (), Error = ()> {
@@ -87,14 +79,14 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
                     // Build the notification to share in the chat
                     let notification = if failed {
                         format!(
-                            "An administrator should ban {} for posing Binance promotions.\n\n\
+                            "An administrator should ban {} for posting Binance promotions.\n\n\
                             Add this bot as explicit administrator in this group to automatically ban users posting new promotions. \
                             Administrators are never banned automatically.",
                             name,
                         )
                     } else {
                         format!(
-                            "Automatically banned {} for posing Binance promotions.",
+                            "Automatically banned {} for posting Binance promotions.",
                             name,
                         )
                     };

@@ -1,14 +1,11 @@
 use std::path::Path;
 
 use dssim::Dssim;
-use futures::{Future, future::ok};
+use futures::{future::ok, Future};
 use image::GenericImageView;
 use image::{imageops, FilterType};
 
-use crate::{
-    config::*,
-    util
-};
+use crate::{config::*, util};
 
 /// Check whether the given image is illegal.
 pub fn is_illegal_image(image: &Path) -> impl Future<Item = bool, Error = ()> {
