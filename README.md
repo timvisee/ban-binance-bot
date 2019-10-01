@@ -43,7 +43,7 @@ Illegal messages by administrators may be deleted, but administrators are never 
 I host a public instance of this bot which you can use in your own groups.
 
 1.  Directly message [@banbinancebot][telegram-link] in Telegram,
-    make sure the bot responds to verify it still running.
+    make sure the bot responds to verify it's still running.
 2.  Add [@banbinancebot][telegram-link] to any of your Telegram
     groups.
 3.  Make [@banbinancebot][telegram-link] administrator, to support
