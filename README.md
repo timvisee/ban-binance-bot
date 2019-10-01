@@ -1,7 +1,9 @@
 [![Build status on GitLab CI][gitlab-ci-master-badge]][gitlab-ci-link]
+[![Add bot on Telegram][telegram-badge]][telegram-link]
 
 [gitlab-ci-link]: https://gitlab.com/timvisee/ban-binance-bot/pipelines
 [gitlab-ci-master-badge]: https://gitlab.com/timvisee/ban-binance-bot/badges/master/pipeline.svg
+[telegram-badge]: https://img.shields.io/badge/Telegram-@banbinancebot-blue.svg
 
 _Note: This bot is a Work in Progress, it works but it's being tested with. The
 source code will be a mess until testing is done and a first release is
@@ -40,11 +42,11 @@ Illegal messages by administrators may be deleted, but administrators are never 
 ## How to use?
 I host a public instance of this bot which you can use in your own groups.
 
-1.  Directly message [@banbinancebot](https://t.me/banbinancebot) in Telegram,
+1.  Directly message [@banbinancebot][telegram-link] in Telegram,
     make sure the bot responds to verify it still running.
-2.  Add [@banbinancebot](https://t.me/banbinancebot) to any of your Telegram
+2.  Add [@banbinancebot][telegram-link] to any of your Telegram
     groups.
-3.  Make [@banbinancebot](https://t.me/banbinancebot) administrator, to support
+3.  Make [@banbinancebot][telegram-link] administrator, to support
     automatic banning.
     - In normal groups; disable 'All Members Are Admins', mark the bot as administrator
     - In supergroups; mark the bot as administrator
@@ -62,3 +64,5 @@ with no user intervention.
 ## License
 This project is licensed under the GNU GPL-3.0 license.
 Check out the [LICENSE](LICENSE) file for more information.
+
+[telegram-link]: https://t.me/banbinancebot
