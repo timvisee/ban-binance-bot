@@ -13,6 +13,10 @@ license = "GPL-3.0"
 [badges]
 gitlab = { repository = "timvisee/ban-binance-bot", branch = "master" }
 
+[features]
+default = ["ocr"]
+ocr = ["leptess"]
+
 [dependencies]
 dotenv = "0.14"
 dssim = "2.9"
@@ -29,6 +33,8 @@ tokio-fs = "0.1"
 tokio-io = "0.1"
 tokio-signal = "0.2"
 url = "1.2"
+
+leptess = { version = "0.6", optional = true }
 
 # Use a specific version with patched Telegram bot API
 [dependencies.telegram-bot]

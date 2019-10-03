@@ -53,6 +53,47 @@ I host a public instance of this bot which you can use in your own groups.
 
 You can always compile this bot yourself, to host your own instance.
 
+### Build & runtime requirements
+Build requirements:
+- Rust 1.32 (or higher) (via [rustup](https://rustup.rs))
+- Feature specific:
+  - `ocr`: (default, scan images for illegal text)
+    - `tesseract` and `leptonica` libraries:
+      - Ubuntu: `sudo apt-get install libleptonica-dev libtesseract-dev`
+
+Runtime requirements:
+- A Telegram bot token
+- Feature specific:
+  - `ocr`: (default, scan images for illegal text)
+    - `tesseract` and `leptonica` libraries:
+      - Ubuntu: `sudo apt-get install tesseract-ocr-eng`
+
+```bash
+# Clone repository
+git clone git@github.com:timvisee/ban-binance-bot.git
+cd ban-binance-bot
+
+# Install OCR libraries
+sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng
+
+# Build release
+cargo build --release
+
+# Configure .env
+cp .env.example .env
+nano .env
+
+# Run the bot
+./target/release/ban-binance-bot
+```
+
+To build the bot without OCR features, so you don't have to install extra
+packages, use:
+
+```bash
+cargo build --release --no-default-features
+```
+
 ### Privacy notice
 Once added to a group, this bot scans all following user messages to determine
 whether illegal content is posted. All links are visited to determine whether

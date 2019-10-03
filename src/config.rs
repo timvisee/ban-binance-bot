@@ -13,6 +13,15 @@ pub const ILLEGAL_HOSTS: [&str; 8] = [
 /// A list of illegal URL host parts.
 pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysolution"];
 
+/// A list of illegal text in images.
+#[cfg(feature = "ocr")]
+pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [
+    "EVENT ENDS AT MIDNIGHT TODAY!",
+    "First 5000 Pertidipants Bonus!",
+    "Catherine Coley",
+    "Binance US",
+];
+
 /// Directory containing all illegal images.
 pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
 
