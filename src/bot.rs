@@ -120,12 +120,12 @@ fn is_illegal_message(msg: Message, state: State) -> Box<dyn Future<Item = bool,
 
     let mut future: Box<dyn Future<Item = _, Error = _>> = Box::new(ok(false));
 
-    // Check message files (pictures, stickers, files, ...)
-    if let Some(files) = msg.files() {
+    // Check message text
+    if let Some(text) = msg.text() {
         future = Box::new(
             future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
                 if !illegal {
-                    Box::new(scanner::file::has_illegal_files(files, state))
+                    Box::new(scanner::text::is_illegal_text(text))
                 } else {
                     Box::new(ok(illegal))
                 }
@@ -133,12 +133,12 @@ fn is_illegal_message(msg: Message, state: State) -> Box<dyn Future<Item = bool,
         );
     }
 
-    // Check message text
-    if let Some(text) = msg.text() {
+    // Check message files (pictures, stickers, files, ...)
+    if let Some(files) = msg.files() {
         future = Box::new(
             future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
                 if !illegal {
-                    Box::new(scanner::text::is_illegal_text(text))
+                    Box::new(scanner::file::has_illegal_files(files, state))
                 } else {
                     Box::new(ok(illegal))
                 }
