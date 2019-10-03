@@ -17,4 +17,4 @@ pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
 pub const MAX_FILE_SIZE: i64 = 2 * 1024 * 1024;
 
 /// Images are illegal when their similarity to any template image is `<= threhold`.
-pub const IMAGE_BAN_THRESHOLD: f64 = 0.07;
+pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
