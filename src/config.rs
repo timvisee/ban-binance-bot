@@ -16,8 +16,8 @@ pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysol
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [
-    "EVENT ENDS AT MIDNIGHT TODAY!",
-    "First 5000 Pertidipants Bonus!",
+    "EVENT ENDS AT MIDNIGHT TODAY",
+    "First 5000 Pertidipants Bonus",
     "Catherine Coley",
     "Binance US",
 ];

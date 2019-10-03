@@ -42,7 +42,10 @@ fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Err
             .telegram_client()
             .send(
                 msg.text_reply(format!(
-                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n{}, add me to a group to start banning Binance advertising bots.",
+                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
+                    {}, add me to a group to start banning Binance advertising bots.\n\n\
+                    [» How does it work?](https://github.com/timvisee/ban-binance-bot#how-does-it-work)\n\
+                    [» How to use?](https://github.com/timvisee/ban-binance-bot#how-to-use)",
                     msg.from.first_name,
                 ))
                 .parse_mode(ParseMode::Markdown),
@@ -80,7 +83,7 @@ fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error
                     let notification = if failed {
                         format!(
                             "An administrator should ban {} for posting Binance promotions.\n\n\
-                            Add this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+                            [Add](https://github.com/timvisee/ban-binance-bot#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
                             Administrators are never banned automatically.",
                             name,
                         )
