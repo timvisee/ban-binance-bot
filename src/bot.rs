@@ -48,7 +48,8 @@ fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Err
                     [» How to use?](https://github.com/timvisee/ban-binance-bot#how-to-use)",
                     msg.from.first_name,
                 ))
-                .parse_mode(ParseMode::Markdown),
+                .parse_mode(ParseMode::Markdown)
+                .disable_preview(),
             )
             .map(|_| ())
             .map_err(|_| ()),
