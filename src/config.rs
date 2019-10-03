@@ -1,5 +1,6 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 7] = [
+pub const ILLEGAL_HOSTS: [&str; 8] = [
+    "binance.jerseyonline.icu",
     "exchange.jerseysolution.services",
     "exchange.marketrelease.services",
     "binance.dexsupport.site",

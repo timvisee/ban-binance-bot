@@ -42,7 +42,7 @@ fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Err
             .telegram_client()
             .send(
                 msg.text_reply(format!(
-                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n{}, add me to a group to start banning Binance promotion bots.",
+                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n{}, add me to a group to start banning Binance advertising bots.",
                     msg.from.first_name,
                 ))
                 .parse_mode(ParseMode::Markdown),
