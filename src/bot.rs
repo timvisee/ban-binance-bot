@@ -37,6 +37,13 @@ pub fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item 
 ///
 /// This simply notifies the user that the bot is active, and doesn't really do anything else.
 fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Error = ()>> {
+    // Log that we're receiving a private message
+    println!(
+        "Received private message from {}: {}",
+        util::telegram::format_user_name_log(&msg.from),
+        msg.text().unwrap_or_else(|| "?".into())
+    );
+
     Box::new(
         state
             .telegram_client()

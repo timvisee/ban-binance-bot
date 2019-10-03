@@ -17,7 +17,7 @@ pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysol
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [
     "EVENT ENDS AT MIDNIGHT TODAY",
-    "First 5000 Pertidipants Bonus",
+    "First 5000 Participants Bonus",
     "Catherine Coley",
     "Binance US",
 ];
