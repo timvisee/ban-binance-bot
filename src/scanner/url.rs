@@ -60,5 +60,6 @@ pub fn is_illegal_url(url: &Url) -> bool {
         return true;
     }
 
+    println!("Got legal url");
     false
 }

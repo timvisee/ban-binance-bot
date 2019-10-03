@@ -35,8 +35,8 @@ pub fn follow_url(url: &Url) -> impl Future<Item = Url, Error = FollowError> {
     let client = Client::builder()
         .danger_accept_invalid_certs(true)
         .redirect(RedirectPolicy::limited(25))
-        .timeout(Duration::from_secs(60))
-        .connect_timeout(Duration::from_secs(60))
+        .timeout(Duration::from_secs(15))
+        .connect_timeout(Duration::from_secs(20))
         .build()
         .expect("failed to build URL forward resolver client");
 
