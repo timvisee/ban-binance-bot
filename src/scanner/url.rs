@@ -1,14 +1,7 @@
-use futures::{
-    future::ok,
-    stream::iter_ok,
-    Future, Stream,
-};
+use futures::{future::ok, stream::iter_ok, Future, Stream};
 use url::Url;
 
-use crate::{
-    util,
-    config::*,
-};
+use crate::{config::*, util};
 
 /// Check whether the given text contains any illegal URLs.
 ///

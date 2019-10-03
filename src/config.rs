@@ -9,6 +9,9 @@ pub const ILLEGAL_HOSTS: [&str; 7] = [
     "binance.us",
 ];
 
+/// Directory containing all illegal images.
+pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
+
 /// The maximum file size in bytes of files to check for legality.
 pub const MAX_FILE_SIZE: i64 = 2 * 1024 * 1024;
 
