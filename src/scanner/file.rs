@@ -1,7 +1,8 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures::{future::ok, stream::iter_ok, Future, Stream};
-use telegram_bot::*;
+use telegram_bot::GetFile;
 
 use crate::{config::*, state::State, util};
 
@@ -61,7 +62,7 @@ pub fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, 
         {
             return Box::new(
                 util::download::download_temp(&url)
-                    .and_then(|(_file, path)| super::image::is_illegal_image(&path)),
+                    .and_then(|(_file, path)| super::image::is_illegal_image(Arc::new(path))),
             );
         }
 

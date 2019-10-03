@@ -53,7 +53,7 @@ I host a public instance of this bot which you can use in your own groups.
 
 You can always compile this bot yourself, to host your own instance.
 
-### Build & runtime requirements
+## Build & runtime requirements
 Build requirements:
 - Rust 1.32 (or higher) (via [rustup](https://rustup.rs))
 - Feature specific:
@@ -94,7 +94,7 @@ packages, use:
 cargo build --release --no-default-features
 ```
 
-### Privacy notice
+## Privacy notice
 Once added to a group, this bot scans all following user messages to determine
 whether illegal content is posted. All links are visited to determine whether
 the link to any illegal content. All files (photos, GIFs, ...) are downloaded

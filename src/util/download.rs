@@ -2,11 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::time::Duration;
 
-use futures::{
-    prelude::*,
-    Future,
-    Stream,
-};
+use futures::{prelude::*, Future, Stream};
 use reqwest::r#async::Client;
 use tempfile::{Builder, TempPath};
 
