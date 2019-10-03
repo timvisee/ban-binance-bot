@@ -43,11 +43,22 @@ pub fn is_illegal_url(url: &Url) -> bool {
     let host = host.trim().to_lowercase();
 
     // Match the URL against a list of banned hosts
-    let illegal = ILLEGAL_HOSTS
+    if ILLEGAL_HOSTS
         .iter()
-        .any(|illegal_host| illegal_host == &host);
-    if illegal {
-        println!("Found illegal host!");
+        .any(|illegal_host| illegal_host == &host)
+    {
+        println!("Found illegal host (on illegal host)!");
+        return true;
     }
-    illegal
+
+    // Match the URL against a list of banned host parts
+    let illegal = ILLEGAL_HOST_PARTS
+        .iter()
+        .any(|illegal_part| host.contains(illegal_part));
+    if illegal {
+        println!("Found illegal host (contains illegal part)!");
+        return true;
+    }
+
+    false
 }

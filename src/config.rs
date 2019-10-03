@@ -10,6 +10,9 @@ pub const ILLEGAL_HOSTS: [&str; 8] = [
     "binance.us",
 ];
 
+/// A list of illegal URL host parts.
+pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysolution"];
+
 /// Directory containing all illegal images.
 pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
 
