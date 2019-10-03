@@ -1,4 +1,4 @@
-use futures::{future::ok, stream::iter_ok, Future, Stream};
+use futures::prelude::*;
 use url::Url;
 
 use crate::{config::*, util};
@@ -6,7 +6,7 @@ use crate::{config::*, util};
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = ()>> {
+pub async fn contains_illegal_urls(text: &str) -> Result<bool, ()> {
     // TODO: do a forwarding check, compare target URLs as well
 
     // Find URLs in the message
@@ -15,22 +15,22 @@ pub fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = 
     // Scan for any static illegal URLs in the text message
     let illegal = urls.iter().any(is_illegal_url);
     if illegal {
-        return Box::new(ok(true));
+        return Ok(true);
     }
 
-    // Resolve all URL forwards, and test for illegal URLs again
-    let future = iter_ok(urls)
-        // Filter URLs that are still the same
-        .and_then(|url| util::url::follow_url(&url))
-        .and_then(|url| ok(is_illegal_url(&url)))
-        // TODO: do not map errors here
-        .into_future()
-        // TODO: test all results here
-        .map(|(result, _)| result.unwrap_or(false))
-        .map_err(|_| ());
+    // Resolve all URL redirects, and test for illegal URLs again
+    // TODO: use iterator here
+    for url in urls {
+        // TODO: do not drop error here
+        let url = util::url::follow_url(&url).inspect_err(|err| { dbg!(err); }).await;
+        if let Ok(url) = &url {
+            if is_illegal_url(url) {
+                return Ok(true);
+            }
+        }
+    }
 
-    // Follow redirects on all URLs, and test the target URLs again
-    Box::new(future)
+    Ok(false)
 }
 
 /// Check wheher the given URL is illegal.

@@ -3,7 +3,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dssim::Dssim;
-use futures::{future::ok, Future};
 use image::GenericImageView;
 use image::{imageops, FilterType};
 use tempfile::TempPath;
@@ -11,25 +10,15 @@ use tempfile::TempPath;
 use crate::{config::*, scanner, util};
 
 /// Check whether the given image is illegal.
-pub fn is_illegal_image(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Error = ()>> {
+pub async fn is_illegal_image(path: Arc<TempPath>) -> Result<bool, ()> {
     println!("Checking image {:?}...", path);
-
-    // Set up a return future
-    let mut future: Box<dyn Future<Item = _, Error = _>> = Box::new(ok(false));
 
     // Check for illegal text in images
     #[cfg(feature = "ocr")]
     {
-        let path = path.clone();
-        future = Box::new(future.and_then(
-            move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
-                if !illegal {
-                    Box::new(has_illegal_text(path))
-                } else {
-                    Box::new(ok(illegal))
-                }
-            },
-        ));
+        if has_illegal_text(path.clone()).await? {
+            return Ok(true);
+        }
     }
 
     // TODO: make the following async as well
@@ -42,7 +31,7 @@ pub fn is_illegal_image(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Erro
                 "failed create directory reader for illegal image templates: {}",
                 err
             );
-            return Box::new(ok(false));
+            return Ok(false);
         }
     };
 
@@ -57,22 +46,19 @@ pub fn is_illegal_image(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Erro
                 .ok()
         })
         .any(|template_path| match_image(&path, &template_path.path()));
-    if illegal {
-        future = Box::new(ok(true));
-    }
 
-    future
+    Ok(illegal)
 }
 
 /// Check whether the images contains any illegal text, with an OCR check.
 #[cfg(feature = "ocr")]
-fn has_illegal_text(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Error = ()>> {
+async fn has_illegal_text(path: Arc<TempPath>) -> Result<bool, ()> {
     // Get the path as a string
     let path = match path.to_str() {
         Some(path) => path,
         None => {
             println!("failed to obtain image path as text for OCR check, ignoring...");
-            return Box::new(ok(false));
+            return Ok(false);
         }
     };
 
@@ -86,7 +72,7 @@ fn has_illegal_text(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Error = 
         Ok(text) => text,
         Err(err) => {
             println!("failed to OCR: {}", err);
-            return Box::new(ok(false));
+            return Ok(false);
         }
     };
 
@@ -99,11 +85,11 @@ fn has_illegal_text(path: Arc<TempPath>) -> Box<dyn Future<Item = bool, Error = 
         .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
     if illegal {
         println!("Found illegal text in image!");
-        return Box::new(ok(true));
+        return Ok(true);
     }
 
     // Scan for generic illegal text as well, return the result
-    Box::new(scanner::text::is_illegal_text(text))
+    scanner::text::is_illegal_text(text).await
 }
 
 /// Check whether the images at the given two paths match.
