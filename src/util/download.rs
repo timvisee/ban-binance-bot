@@ -56,12 +56,14 @@ pub async fn download_temp(url: &str) -> Result<(File, TempPath), ()> {
         dbg!(err);
         ()
     }).await? {
-        file.write_all(&chunk);
+        file.write_all(&chunk).map_err(|err| {
+            eprintln!("Failed to write chunk to file being downloaded: {}", err);
+            ()
+        })?;
     }
 
     // Force sync the file
-    // TODO: do not drop error here
-    file.sync_all();
+    let _ = file.sync_all();
 
     Ok((file, path))
 }

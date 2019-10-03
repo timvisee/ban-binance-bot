@@ -105,8 +105,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
             )
         };
 
-        // TODO: do not ignore error here
-        // TODO: ignore error but log warning
+        // Send a ban notification to the chat
         let notify_msg = state
             .telegram_client()
             .send(
@@ -117,6 +116,9 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
             )
             .map_err(|_| ())
             .await;
+        if let Err(err) = notify_msg {
+            eprintln!("Failed to send ban notification in chat, ignoring...\n{:?}", err);
+        }
     }
 
     Ok(())
