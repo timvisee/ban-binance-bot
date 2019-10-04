@@ -5,7 +5,7 @@ stages:
   - build
 
 variables:
-  RUST_VERSION: stable
+  RUST_VERSION: nightly
 
 # # Cargo artifacts caching per Rust version and pipeline
 # cache:
@@ -36,12 +36,14 @@ variables:
   script:
     - cargo check --verbose
     - cargo test --verbose
-check-stable:
-  <<: *check-base
-check-beta:
-  <<: *check-base
-  variables:
-    RUST_VERSION: beta
+# check-stable:
+#   <<: *check-base
+#   variables:
+#     RUST_VERSION: stable
+# check-beta:
+#   <<: *check-base
+#   variables:
+#     RUST_VERSION: beta
 check-nightly:
   <<: *check-base
   variables:
@@ -51,6 +53,6 @@ check-nightly:
 build:
   stage: build
   needs:
-    - check-stable
+    - check-nightly
   script:
     - cargo build --release --verbose
