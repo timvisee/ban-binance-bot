@@ -7,34 +7,43 @@ use crate::{config::*, util};
 ///
 /// This uses `ILLEGAL_HOSTS`.
 pub async fn contains_illegal_urls(text: &str) -> Result<bool, ()> {
-    // TODO: do a forwarding check, compare target URLs as well
-
     // Find URLs in the message
     let urls = util::url::find_urls(text);
 
-    // Scan for any static illegal URLs in the text message
-    let illegal = urls.iter().any(is_illegal_url);
-    if illegal {
-        return Ok(true);
+    // Test each URL concurrently
+    let test_urls = urls.into_iter().map(|u| is_illegal_url(u).boxed());
+    Ok(futures::future::select_ok(test_urls).await.is_ok())
+}
+
+/// Check whether the given URL is illegal.
+///
+/// This compares the given URL, and the URL it possibly redirects to.
+///
+/// Returns `Ok` if the URL is illegal, `Err` otherwise.
+/// Errors are silently dropped and it will then be assumed that the URL is allowed.
+/// This allows the use of `futures::future::select_ok`.
+async fn is_illegal_url(url: Url) -> Result<(), ()> {
+    // The given URL must not be illegal
+    if is_illegal_static_url(&url) {
+        return Ok(());
     }
 
-    // Resolve all URL redirects, and test for illegal URLs again
-    // TODO: use iterator here
-    for url in urls {
-        // TODO: do not drop error here
-        let url = util::url::follow_url(&url).inspect_err(|err| { dbg!(err); }).await;
-        if let Ok(url) = &url {
-            if is_illegal_url(url) {
-                return Ok(true);
-            }
+    // Follow URL redirects
+    match util::url::follow_url(&url).await {
+        Ok(ref url) if is_illegal_static_url(url) => Ok(()),
+	Ok(_) => Err(()),
+        Err(err) => {
+            // TODO: do not drop error here
+            dbg!(err);
+            Err(())
         }
     }
-
-    Ok(false)
 }
 
 /// Check wheher the given URL is illegal.
-pub fn is_illegal_url(url: &Url) -> bool {
+///
+/// This checks the static URL, and does not do any redirect checking.
+pub fn is_illegal_static_url(url: &Url) -> bool {
     // Get the host
     let host = match url.host_str() {
         Some(host) => host,
