@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use futures::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
 use url::Url;

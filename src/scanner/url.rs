@@ -7,8 +7,11 @@ use crate::{config::*, util};
 ///
 /// This uses `ILLEGAL_HOSTS`.
 pub async fn contains_illegal_urls(text: &str) -> Result<bool, ()> {
-    // Find URLs in the message
+    // Find URLs in the message, return if there are none
     let urls = util::url::find_urls(text);
+    if urls.is_empty() {
+        return Ok(false);
+    }
 
     // Test each URL concurrently
     let test_urls = urls.into_iter().map(|u| is_illegal_url(u).boxed());
