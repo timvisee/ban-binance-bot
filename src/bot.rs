@@ -55,8 +55,8 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
             msg.text_reply(format!(
                 "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
                 {}, add me to a group to start banning Binance advertising bots.\n\n\
-                [» How does it work?](https://github.com/timvisee/ban-binance-bot#how-does-it-work)\n\
-                [» How to use?](https://github.com/timvisee/ban-binance-bot#how-to-use)",
+                [» How does it work?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-does-it-work)\n\
+                [» How to use?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use)",
                 msg.from.first_name,
             ))
             .parse_mode(ParseMode::Markdown)
@@ -94,7 +94,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         let notification = if kick_user.is_err() {
             format!(
                 "An administrator should ban {} for posting Binance promotions.\n\n\
-                [Add](https://github.com/timvisee/ban-binance-bot#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+                [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
                 Administrators are never banned automatically.",
                 name,
             )
