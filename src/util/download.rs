@@ -2,8 +2,8 @@ use std::fs::File;
 use std::io::Write;
 use std::time::Duration;
 
-use futures::{prelude::*, Future, Stream};
-use reqwest::r#async::Client;
+use futures::prelude::*;
+use reqwest::Client;
 use tempfile::{Builder, TempPath};
 
 /// Download a file at the given URL to a temporary file on the system.
@@ -12,7 +12,7 @@ use tempfile::{Builder, TempPath};
 /// The actual downloaded file is automatically deleted from disk when the last file handle
 /// (`File`) is dropped. See `tempfile::NamedTempFile` for more details.
 // TODO: make this properly async, the download process isn't at this moment
-pub fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = ()> {
+pub async fn download_temp(url: &str) -> Result<(File, TempPath), ()> {
     // Build the download client
     // TODO: use a global client instance
     let client = Client::builder()
@@ -22,10 +22,10 @@ pub fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = 
         .expect("failed to build file downloading client");
 
     // Get file name to suffix temporary downloaded file with
-    let name = url.split('/').last().unwrap_or("");;
+    let name = url.split('/').last().unwrap_or("");
 
     // Create temporary file
-    let (file, path) = Builder::new()
+    let (mut file, path) = Builder::new()
         .suffix(name)
         .tempfile()
         .expect("failed to create file for download")
@@ -39,7 +39,8 @@ pub fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = 
 
     // TODO: check status code
 
-    client
+    // Make the request, obtain the repsonse
+    let mut response = client
         .get(url)
         .send()
         // TODO: do not drop error here
@@ -47,33 +48,22 @@ pub fn download_temp(url: &str) -> impl Future<Item = (File, TempPath), Error = 
             dbg!(err);
             ()
         })
-        .and_then(|response| {
-            response
-                .into_body()
-                // TODO: do not drop error here
-                .map_err(|err| {
-                    dbg!(err);
-                    ()
-                })
-                .fold(file, |mut download, chunk| {
-                    download
-                        .write_all(&chunk)
-                        .into_future()
-                        .map(|_| download)
-                        .map_err(|err| {
-                            dbg!(err);
-                            ()
-                        })
-                })
-        })
-        .and_then(|file| {
-            // Force sync the file
-            // TODO: do not drop error here
-            file.sync_all().map(|_| file).map_err(|_| ())
-        })
-        .map(|file| (file, path))
-        .map_err(|_| {
-            eprintln!("CATCHED ERR!");
+        .await?;
+
+    // Write response body chunks to file
+    // TODO: do not drop errors here
+    while let Some(chunk) = response.chunk().map_err(|err| {
+        dbg!(err);
+        ()
+    }).await? {
+        file.write_all(&chunk).map_err(|err| {
+            eprintln!("Failed to write chunk to file being downloaded: {}", err);
             ()
-        })
+        })?;
+    }
+
+    // Force sync the file
+    let _ = file.sync_all();
+
+    Ok((file, path))
 }

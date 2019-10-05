@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use futures::Future;
+use futures::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
 use url::Url;
@@ -27,9 +27,7 @@ pub fn find_urls(text: &str) -> Vec<Url> {
 /// Follow redirects on the given URL, and return the final full URL.
 ///
 /// This is used to obtain share URLs from shortened links.
-///
-// TODO: extract this into module
-pub fn follow_url(url: &Url) -> impl Future<Item = Url, Error = FollowError> {
+pub async fn follow_url(url: &Url) -> Result<Url, FollowError> {
     // Build the URL client
     // TODO: use a global client instance
     let client = Client::builder()
@@ -42,16 +40,19 @@ pub fn follow_url(url: &Url) -> impl Future<Item = Url, Error = FollowError> {
 
     println!("Checking URL for redirects: {}", url.as_str());
 
-    // Send the request, follow the URL, ensure success
+    // Send the request, follow the URL
     let response = client
         .get(url.as_str())
         .send()
-        .map_err(FollowError::Request);
+        .await;
 
     // TODO: validate status !response.status.is_success()
 
-    // Obtain the final URL
-    response.map(|r| r.url().clone())
+    // Return the target URL, or the last known URL on error
+    match response {
+        Ok(response) => Ok(response.url().clone()),
+        Err(err) => err.url().cloned().ok_or(FollowError::Request(err)),
+    }
 }
 
 /// URL following error.

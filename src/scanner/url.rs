@@ -1,4 +1,4 @@
-use futures::{future::ok, stream::iter_ok, Future, Stream};
+use futures::prelude::*;
 use url::Url;
 
 use crate::{config::*, util};
@@ -6,35 +6,44 @@ use crate::{config::*, util};
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub fn contains_illegal_urls(text: &str) -> Box<dyn Future<Item = bool, Error = ()>> {
-    // TODO: do a forwarding check, compare target URLs as well
-
+pub async fn contains_illegal_urls(text: &str) -> Result<bool, ()> {
     // Find URLs in the message
     let urls = util::url::find_urls(text);
 
-    // Scan for any static illegal URLs in the text message
-    let illegal = urls.iter().any(is_illegal_url);
-    if illegal {
-        return Box::new(ok(true));
+    // Test each URL concurrently
+    let test_urls = urls.into_iter().map(|u| is_illegal_url(u).boxed());
+    Ok(futures::future::select_ok(test_urls).await.is_ok())
+}
+
+/// Check whether the given URL is illegal.
+///
+/// This compares the given URL, and the URL it possibly redirects to.
+///
+/// Returns `Ok` if the URL is illegal, `Err` otherwise.
+/// Errors are silently dropped and it will then be assumed that the URL is allowed.
+/// This allows the use of `futures::future::select_ok`.
+async fn is_illegal_url(url: Url) -> Result<(), ()> {
+    // The given URL must not be illegal
+    if is_illegal_static_url(&url) {
+        return Ok(());
     }
 
-    // Resolve all URL forwards, and test for illegal URLs again
-    let future = iter_ok(urls)
-        // Filter URLs that are still the same
-        .and_then(|url| util::url::follow_url(&url))
-        .and_then(|url| ok(is_illegal_url(&url)))
-        // TODO: do not map errors here
-        .into_future()
-        // TODO: test all results here
-        .map(|(result, _)| result.unwrap_or(false))
-        .map_err(|_| ());
-
-    // Follow redirects on all URLs, and test the target URLs again
-    Box::new(future)
+    // Follow URL redirects
+    match util::url::follow_url(&url).await {
+        Ok(ref url) if is_illegal_static_url(url) => Ok(()),
+	Ok(_) => Err(()),
+        Err(err) => {
+            // TODO: do not drop error here
+            dbg!(err);
+            Err(())
+        }
+    }
 }
 
 /// Check wheher the given URL is illegal.
-pub fn is_illegal_url(url: &Url) -> bool {
+///
+/// This checks the static URL, and does not do any redirect checking.
+pub fn is_illegal_static_url(url: &Url) -> bool {
     // Get the host
     let host = match url.host_str() {
         Some(host) => host,

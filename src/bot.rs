@@ -1,42 +1,41 @@
-use futures::{future::ok, Future, Stream};
+use futures::prelude::*;
 use telegram_bot::{types::Message, *};
-use tokio_core::reactor::Handle;
 
 use crate::{scanner, state::State, traits::*, util};
 
 /// Build a future for handling Telegram API updates.
-pub fn build_telegram_handler(state: State, handle: Handle) -> impl Future<Item = (), Error = ()> {
-    state
-        .telegram_client()
-        .stream()
-        .for_each(move |update| {
-            // Clone the state to get ownership
-            let state = state.clone();
+// TODO: handle update errors here
+pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
+    // Fetch new updates via long poll method
+    let mut stream = state.telegram_client().stream();
 
-            // Process messages
-            match update.kind {
-                UpdateKind::Message(msg) => match &msg.chat {
-                    MessageChat::Private(..) => handle.spawn(handle_private(&state, &msg)),
-                    _ => handle.spawn(handle_message(msg, state)),
+    while let Some(update) = stream.next().await {
+        // Make sure we received a enw update
+        // TODO: do not drop error here
+        let update = update.map_err(|_| ())?;
+
+        // Process messages
+        match update.kind {
+            UpdateKind::Message(msg) => match &msg.chat {
+                MessageChat::Private(..) => {
+                    handle_private(&state, &msg).await?;
                 },
-                UpdateKind::EditedMessage(msg) => {
-                    handle.spawn(handle_message(msg, state));
-                }
-                _ => {}
+                _ => {handle_message(msg, state.clone()).await?;},
+            },
+            UpdateKind::EditedMessage(msg) => {
+                handle_message(msg, state.clone()).await?;
             }
+            _ => {}
+        }
+    }
 
-            ok(())
-        })
-        .map_err(|err| {
-            eprintln!("ERR: Telegram API updates loop error, ignoring: {}", err);
-            ()
-        })
+    Ok(())
 }
 
 /// Handle the given private/direct message.
 ///
 /// This simply notifies the user that the bot is active, and doesn't really do anything else.
-fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Error = ()>> {
+async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     // Log that we're receiving a private message
     println!(
         "Received private message from {}: {}",
@@ -44,118 +43,91 @@ fn handle_private(state: &State, msg: &Message) -> Box<dyn Future<Item = (), Err
         msg.text().unwrap_or_else(|| "?".into())
     );
 
-    Box::new(
-        state
-            .telegram_client()
-            .send(
-                msg.text_reply(format!(
-                    "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
-                    {}, add me to a group to start banning Binance advertising bots.\n\n\
-                    [» How does it work?](https://github.com/timvisee/ban-binance-bot#how-does-it-work)\n\
-                    [» How to use?](https://github.com/timvisee/ban-binance-bot#how-to-use)",
-                    msg.from.first_name,
-                ))
-                .parse_mode(ParseMode::Markdown)
-                .disable_preview(),
-            )
-            .map(|_| ())
-            .map_err(|_| ()),
-    )
+    state
+        .telegram_client()
+        .send(
+            msg.text_reply(format!(
+                "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
+                {}, add me to a group to start banning Binance advertising bots.\n\n\
+                [» How does it work?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-does-it-work)\n\
+                [» How to use?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use)",
+                msg.from.first_name,
+            ))
+            .parse_mode(ParseMode::Markdown)
+            .disable_preview(),
+        )
+        // TODO: do not drop error here
+        .map(|_| Ok(()))
+        .await
 }
 
 /// Handle the given message.
 ///
 /// This checks if the message is illegal, and immediately bans the sender if it is.
-fn handle_message(msg: Message, state: State) -> Box<dyn Future<Item = (), Error = ()>> {
-    // TODO: do not clone, but reference
+async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
+    // Return if not illegal, ban user otherwise
+    if !is_illegal_message(msg.clone(), state.clone()).await? {
+        return Ok(());
+    }
 
-    Box::new(is_illegal_message(msg.clone(), state.clone()).and_then(
-        move |illegal| -> Box<dyn Future<Item = _, Error = _>> {
-            // Ban users that send illegal messages
-            if illegal {
-                // Build the message, keep a reference to the chat
-                let name = util::telegram::format_user_name(&msg.from);
-                let chat = msg.chat.clone();
+    // Build the message, keep a reference to the chat
+    let name = util::telegram::format_user_name(&msg.from);
+    let chat = &msg.chat;
 
-                // TODO: do not ignore error here
-                let kick_user = state.telegram_client().send(msg.from.kick_from(&chat));
+    // Attempt to kick the user, and delete their message
+    let kick_user = state.telegram_client().send(msg.from.kick_from(&chat)).await;
+    let _ = state.telegram_client().send(msg.delete()).await;
 
-                let future = kick_user.then(move |result| {
-                    // Check whether we failed to delete
-                    let failed = result.is_err();
+    // Build the notification to share in the chat
+    let notification = if kick_user.is_err() {
+        format!(
+            "An administrator should ban {} for posting Binance promotions.\n\n\
+            [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+            Administrators are never banned automatically.",
+            name,
+        )
+    } else {
+        format!(
+            "Automatically banned {} for posting Binance promotions.",
+            name,
+        )
+    };
 
-                    // TODO: do not ignore error here
-                    let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ());
+    // Attempt to send a ban notification to the chat
+    let _ = state
+        .telegram_client()
+        .send(
+            chat.text(notification)
+                .parse_mode(ParseMode::Markdown)
+                .disable_preview()
+                .disable_notification(),
+        )
+        .map_err(|err| {
+            eprintln!("Failed to send ban notification in chat, ignoring...\n{:?}", err);
+            ()
+        })
+        .await;
 
-                    // Build the notification to share in the chat
-                    let notification = if failed {
-                        format!(
-                            "An administrator should ban {} for posting Binance promotions.\n\n\
-                            [Add](https://github.com/timvisee/ban-binance-bot#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
-                            Administrators are never banned automatically.",
-                            name,
-                        )
-                    } else {
-                        format!(
-                            "Automatically banned {} for posting Binance promotions.",
-                            name,
-                        )
-                    };
-
-                    // TODO: do not ignore error here
-                    let notify_msg = state
-                        .telegram_client()
-                        .send(
-                            chat.text(notification)
-                                .parse_mode(ParseMode::Markdown)
-                                .disable_preview()
-                                .disable_notification(),
-                        )
-                        .map_err(|_| ());
-
-                    delete_msg.join(notify_msg).map(|_| ())
-                });
-
-                // TODO: do not ignore error here
-                return Box::new(future);
-            }
-
-            Box::new(ok(()))
-        },
-    ))
+    Ok(())
 }
 
 /// Check whether the given message is illegal.
-fn is_illegal_message(msg: Message, state: State) -> Box<dyn Future<Item = bool, Error = ()>> {
+async fn is_illegal_message(msg: Message, state: State) -> Result<bool, ()> {
     // TODO: run check futures concurrently
-
-    let mut future: Box<dyn Future<Item = _, Error = _>> = Box::new(ok(false));
 
     // Check message text
     if let Some(text) = msg.text() {
-        future = Box::new(
-            future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
-                if !illegal {
-                    Box::new(scanner::text::is_illegal_text(text))
-                } else {
-                    Box::new(ok(illegal))
-                }
-            }),
-        );
+        if scanner::text::is_illegal_text(text).await? {
+            return Ok(true);
+        }
     }
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.files() {
-        future = Box::new(
-            future.and_then(|illegal| -> Box<dyn Future<Item = _, Error = _>> {
-                if !illegal {
-                    Box::new(scanner::file::has_illegal_files(files, state))
-                } else {
-                    Box::new(ok(illegal))
-                }
-            }),
-        );
+        if scanner::file::has_illegal_files(files, state).await? {
+            return Ok(true);
+        }
     }
 
-    future
+    Ok(false)
 }

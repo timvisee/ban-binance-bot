@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures::{future::ok, stream::iter_ok, Future, Stream};
+use futures::prelude::*;
 use telegram_bot::GetFile;
 
 use crate::{config::*, state::State, util};
@@ -9,67 +9,61 @@ use crate::{config::*, state::State, util};
 /// Check whether any of the given files is illegal.
 ///
 /// A list of `GetFile` requests is given, as the actual files should still be downloaded.
-pub fn has_illegal_files(
+pub async fn has_illegal_files(
     mut files: Vec<GetFile>,
     state: State,
-) -> impl Future<Item = bool, Error = ()> {
+) -> Result<bool, ()> {
     // TODO: reverse list of files here (pick biggest image first)?
     files.reverse();
 
     // Test all files in order, return if any is illegal
-    iter_ok(files)
-        // TODO: do not clone state here
-        .and_then(move |file| is_illegal_file(file, state.clone()))
-        .filter(|illegal| *illegal)
-        .into_future()
-        .map(|(illegal, _)| match illegal {
-            Some(illegal) => illegal,
-            None => false,
-        })
-        .map_err(|(err, _)| err)
+    // TODO: use iterator
+    for file in files {
+        if is_illegal_file(file, state.clone()).await? {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 /// Check whether the given file is illegal.
 ///
 /// A `GetFile` request is given, as the actual file should still be downloaded.
-pub fn is_illegal_file(file: GetFile, state: State) -> impl Future<Item = bool, Error = ()> {
+pub async fn is_illegal_file(file: GetFile, state: State) -> Result<bool, ()> {
     // Request the file from Telegram
-    let file_url = state
+    let file = state
         .telegram_client()
         .send_timeout(file, Duration::from_secs(30))
-        // TODO: do not ignore error here
-        .map_err(|_| ())
-        .and_then(|file| file.ok_or(()))
-        .map(move |file| {
-            // TODO: do not error here
-            let url = file.get_url(state.token()).expect("failed to get file URL");
-            (file, url)
-        });
+        // TODO: do not drop error here
+        .map_err(|err| {
+            dbg!(err);
+            ()
+        })
+        .await?;
 
-    // Test the file
-    file_url.and_then(|(file, url)| -> Box<dyn Future<Item = _, Error = _>> {
-        // Skip files that are too large
-        match file.file_size {
-            Some(size) if size > MAX_FILE_SIZE => return Box::new(ok(false)),
-            _ => {}
+    // Request the file URL
+    // TODO: do not error here
+    let url = file.get_url(state.token()).expect("failed to get file URL");
+
+    // Skip files that are too large
+    match file.file_size {
+        Some(size) if size > MAX_FILE_SIZE => return Ok(false),
+        _ => {}
+    };
+
+    // TODO: better extension test
+    if url.ends_with(".jpg")
+        || url.ends_with(".jpeg")
+        || url.ends_with(".png")
+        || url.ends_with(".webp")
+    {
+        let (_file, path) = util::download::download_temp(&url).await?;
+        // TODO: report errors but ignore
+        if super::image::is_illegal_image(Arc::new(path)).await? {
+            return Ok(true);
         }
+    }
 
-        // TODO: better extension test
-        if url.ends_with(".jpg")
-            || url.ends_with(".jpeg")
-            || url.ends_with(".png")
-            || url.ends_with(".webp")
-        {
-            return Box::new(
-                util::download::download_temp(&url)
-                    .and_then(|(_file, path)| super::image::is_illegal_image(Arc::new(path))),
-            );
-        }
-
-        // TODO: remove after testing
-
-        eprintln!("TODO: Test file at: {}", url);
-
-        Box::new(ok(false))
-    })
+    Ok(false)
 }

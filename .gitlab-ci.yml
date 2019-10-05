@@ -4,8 +4,9 @@ stages:
   - check
   - build
 
+# Variable defaults
 variables:
-  RUST_VERSION: stable
+  RUST_VERSION: nightly
 
 # # Cargo artifacts caching per Rust version and pipeline
 # cache:
@@ -26,22 +27,20 @@ before_script:
     rustc --version
     cargo --version
 
-# Variable defaults
-variables:
-  RUST_VERSION: stable
-
 # Check on stable, beta and nightly 
 .check-base: &check-base
   stage: check
   script:
     - cargo check --verbose
     - cargo test --verbose
-check-stable:
-  <<: *check-base
-check-beta:
-  <<: *check-base
-  variables:
-    RUST_VERSION: beta
+# check-stable:
+#   <<: *check-base
+#   variables:
+#     RUST_VERSION: stable
+# check-beta:
+#   <<: *check-base
+#   variables:
+#     RUST_VERSION: beta
 check-nightly:
   <<: *check-base
   variables:
@@ -51,6 +50,6 @@ check-nightly:
 build:
   stage: build
   needs:
-    - check-stable
+    - check-nightly
   script:
     - cargo build --release --verbose
