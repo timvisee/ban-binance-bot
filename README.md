@@ -54,8 +54,11 @@ I host a public instance of this bot which you can use in your own groups.
 You can always compile this bot yourself, to host your own instance.
 
 ## Build & runtime requirements
+Currently, Rust nightly is used for the new async/await system for asynchronous
+code.
+
 Build requirements:
-- Rust 1.32 (or higher) (via [rustup](https://rustup.rs))
+- Rust 1.39 (or higher) (via [rustup](https://rustup.rs))
 - Feature specific:
   - `ocr`: (default, scan images for illegal text)
     - `tesseract` and `leptonica` libraries:
