@@ -10,9 +10,6 @@ pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
     let mut stream = state.telegram_client().stream();
 
     while let Some(update) = stream.next().await {
-        // TODO: remove after testing
-        eprintln!("#### START WHILE");
-
         // Make sure we received a enw update
         // TODO: do not drop error here
         let update = update.map_err(|_| ())?;
@@ -30,9 +27,6 @@ pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
             }
             _ => {}
         }
-
-        // TODO: remove after testing
-        eprintln!("#### STOP WHILE");
     }
 
     Ok(())
@@ -71,8 +65,6 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
 ///
 /// This checks if the message is illegal, and immediately bans the sender if it is.
 async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
-    // TODO: do not clone, but reference
-
     // Return if not illegal, ban user otherwise
     if !is_illegal_message(msg.clone(), state.clone()).await? {
         return Ok(());
@@ -80,46 +72,41 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 
     // Build the message, keep a reference to the chat
     let name = util::telegram::format_user_name(&msg.from);
-    let chat = msg.chat.clone();
+    let chat = &msg.chat;
 
-    // TODO: do not ignore error here
+    // Attempt to kick the user, and delete their message
     let kick_user = state.telegram_client().send(msg.from.kick_from(&chat)).await;
+    let _ = state.telegram_client().send(msg.delete()).await;
 
-    // TODO: do not ignore error here
-    let delete_msg = state.telegram_client().send(msg.delete()).map_err(|_| ()).await;
+    // Build the notification to share in the chat
+    let notification = if kick_user.is_err() {
+        format!(
+            "An administrator should ban {} for posting Binance promotions.\n\n\
+            [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+            Administrators are never banned automatically.",
+            name,
+        )
+    } else {
+        format!(
+            "Automatically banned {} for posting Binance promotions.",
+            name,
+        )
+    };
 
-    // Show a deleted notification
-    if let Ok(_) = delete_msg {
-        // Build the notification to share in the chat
-        let notification = if kick_user.is_err() {
-            format!(
-                "An administrator should ban {} for posting Binance promotions.\n\n\
-                [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
-                Administrators are never banned automatically.",
-                name,
-            )
-        } else {
-            format!(
-                "Automatically banned {} for posting Binance promotions.",
-                name,
-            )
-        };
-
-        // Send a ban notification to the chat
-        let notify_msg = state
-            .telegram_client()
-            .send(
-                chat.text(notification)
-                    .parse_mode(ParseMode::Markdown)
-                    .disable_preview()
-                    .disable_notification(),
-            )
-            .map_err(|_| ())
-            .await;
-        if let Err(err) = notify_msg {
+    // Attempt to send a ban notification to the chat
+    let _ = state
+        .telegram_client()
+        .send(
+            chat.text(notification)
+                .parse_mode(ParseMode::Markdown)
+                .disable_preview()
+                .disable_notification(),
+        )
+        .map_err(|err| {
             eprintln!("Failed to send ban notification in chat, ignoring...\n{:?}", err);
-        }
-    }
+            ()
+        })
+        .await;
 
     Ok(())
 }
