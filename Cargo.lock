@@ -80,6 +80,7 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "leptess 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "linkify 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.0-alpha.0 (git+https://github.com/seanmonstar/reqwest?rev=5b55aee)",
  "rgb 0.8.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "telegram-bot 0.6.3 (git+https://github.com/telegram-rs/telegram-bot?rev=9061ff8)",

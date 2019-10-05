@@ -1,10 +1,11 @@
-use std::fs;
-use std::path::Path;
+use std::path::{PathBuf, Path};
 use std::sync::Arc;
 
 use dssim::Dssim;
+use futures::{future, prelude::*};
 use image::GenericImageView;
 use image::{imageops, FilterType};
+use num_cpus;
 use tempfile::TempPath;
 
 use crate::{config::*, scanner, util};
@@ -21,79 +22,95 @@ pub async fn is_illegal_image(path: Arc<TempPath>) -> Result<bool, ()> {
         }
     }
 
-    // TODO: make the following async as well
+    // Check whteher the image matches any of the illegal paths
+    Ok(matches_illegal_template(&path).await)
+}
 
-    // Create a directory reader
-    let read_dir = match fs::read_dir(ILLEGAL_IMAGES_DIR) {
+/// Check whether the images contains any illegal text, with an OCR check.
+#[cfg(feature = "ocr")]
+async fn has_illegal_text(path: Arc<TempPath>) -> Result<bool, ()> {
+    Ok(false)
+
+    // // Get the path as a string
+    // let path = match path.to_str() {
+    //     Some(path) => path,
+    //     None => {
+    //         println!("failed to obtain image path as text for OCR check, ignoring...");
+    //         return Ok(false);
+    //     }
+    // };
+
+    // // Construct OCR reader
+    // let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+    // lt.set_image(path);
+
+    // // Read text from image
+    // println!("Scanning for illegal text in image with OCR...");
+    // let text = match lt.get_utf8_text() {early return on early return on 
+    //     Ok(text) => text,
+    //     Err(err) => {
+    //         println!("failed to OCR: {}", err);
+    //         return Ok(false);
+    //     }
+    // };
+
+    // // Trim and lowercase
+    // let text = text.trim().to_lowercase();
+
+    // // Match the URL against a list of banned host parts
+    // let illegal = ILLEGAL_IMAGE_TEXT
+    //     .iter()
+    //     .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
+    // if illegal {
+    //     println!("Found illegal text in image!");
+    //     return Ok(true);
+    // }
+
+    // // Scan for generic illegal text as well, return the result
+    // scanner::text::is_illegal_text(text).await
+}
+
+/// Check whether an image matches an illegal image template.
+///
+/// This checks whether the image at the given path matches any of the images in the illegal image
+/// templates directory.
+///
+/// True is returned if the image is illegal, false if not.
+/// On error, false is returned as it is assumed the image is allowed.
+async fn matches_illegal_template(path: &Path) -> bool {
+    // Create a directory reader to list all image templates
+    let read_dir = match tokio::fs::read_dir(ILLEGAL_IMAGES_DIR).await {
         Ok(read_dir) => read_dir,
         Err(err) => {
             println!(
                 "failed create directory reader for illegal image templates: {}",
                 err
             );
-            return Ok(false);
+            return false;
         }
     };
 
-    // Check if image is illegal by testing against all illegal templates
-    let illegal = read_dir
-        .filter_map(|template_path| {
-            template_path
-                .or_else(|err| {
-                    println!("failed to read illegal image template: {}", err);
-                    Err(())
-                })
-                .ok()
-        })
-        .any(|template_path| match_image(&path, &template_path.path()));
-
-    Ok(illegal)
-}
-
-/// Check whether the images contains any illegal text, with an OCR check.
-#[cfg(feature = "ocr")]
-async fn has_illegal_text(path: Arc<TempPath>) -> Result<bool, ()> {
-    // Get the path as a string
-    let path = match path.to_str() {
-        Some(path) => path,
-        None => {
-            println!("failed to obtain image path as text for OCR check, ignoring...");
-            return Ok(false);
-        }
-    };
-
-    // Construct OCR reader
-    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    lt.set_image(path);
-
-    // Read text from image
-    println!("Scanning for illegal text in image with OCR...");
-    let text = match lt.get_utf8_text() {
-        Ok(text) => text,
-        Err(err) => {
-            println!("failed to OCR: {}", err);
-            return Ok(false);
-        }
-    };
-
-    // Trim and lowercase
-    let text = text.trim().to_lowercase();
-
-    // Match the URL against a list of banned host parts
-    let illegal = ILLEGAL_IMAGE_TEXT
-        .iter()
-        .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
-    if illegal {
-        println!("Found illegal text in image!");
-        return Ok(true);
-    }
-
-    // Scan for generic illegal text as well, return the result
-    scanner::text::is_illegal_text(text).await
+    // Test image for matches with templates, return on first match
+    read_dir
+        .filter_map(|template_path| future::ready(
+            template_path.or_else(|err| {
+                println!("failed to read illegal image template: {}", err);
+                Err(())
+            })
+            .ok()
+        ))
+        .map(|template_path| match_image(&path, template_path.path()).boxed())
+        .buffer_unordered(num_cpus::get())
+        .filter(|illegal| future::ready(*illegal))
+        .next()
+        .await
+        .is_some()
 }
 
 /// Check whether the images at the given two paths match.
-fn match_image(path: &Path, template_path: &Path) -> bool {
+///
+/// This operation is expensive.
+async fn match_image(path: &Path, template_path: PathBuf) -> bool {
     print!(
         "Matching illegal template '{}'...",
         template_path
