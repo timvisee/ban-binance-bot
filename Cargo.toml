@@ -39,7 +39,7 @@ leptess = { version = "0.6", optional = true }
 [dependencies.telegram-bot]
 version = "*"
 git = "https://github.com/telegram-rs/telegram-bot"
-rev = "9061ff8"
+rev = "ee6c3f6"
 
 [dependencies.reqwest]
 version = "0.10.0-alpha.0"

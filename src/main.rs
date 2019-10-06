@@ -8,10 +8,9 @@ mod bot;
 mod config;
 mod scanner;
 mod state;
-mod traits;
 mod util;
 
-#[tokio::main]
+#[tokio::main(multi_thread)]
 async fn main() -> Result<(), ()> {
     // Load the environment variables file
     dotenv().ok();

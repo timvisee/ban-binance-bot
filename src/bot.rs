@@ -2,7 +2,7 @@ use futures::prelude::*;
 use telegram_bot::{prelude::*, types::Message, *};
 use took::Timer;
 
-use crate::{scanner, state::State, traits::*, util};
+use crate::{scanner, state::State, util};
 
 /// Build a future for handling Telegram API updates.
 // TODO: handle update errors here
@@ -72,9 +72,9 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     let illegal = is_illegal_message(msg.clone(), state.clone()).await;
     let took = timer.took();
     let legality_text = if illegal {
-        format!("_Your message is unsafe, and is considered to contain Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
+        format!("_Unsafe! Your message is considered unsafe as it seems to contain Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
     } else {
-        format!("_Your message is safe, and is not seen as Binance spam.\nSend me something else to test._")
+        format!("_Safe. Your message is considered safe, and is not seen as Binance spam.\nSend me something else to test._")
     };
 
     // Post a generic direct message status
@@ -162,7 +162,7 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
     }
 
     // Check message files (pictures, stickers, files, ...)
-    if let Some(files) = msg.files() {
+    if let Some(files) = msg.get_files() {
         if scanner::file::has_illegal_files(files, state).await {
             return true;
         }
