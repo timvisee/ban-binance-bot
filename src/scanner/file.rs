@@ -9,10 +9,7 @@ use crate::{config::*, state::State, util};
 /// Check whether any of the given files is illegal.
 ///
 /// A list of `GetFile` requests is given, as the actual files should still be downloaded.
-pub async fn has_illegal_files(
-    mut files: Vec<GetFile>,
-    state: State,
-) -> bool {
+pub async fn has_illegal_files(mut files: Vec<GetFile>, state: State) -> bool {
     // TODO: reverse list of files here (pick biggest image first)?
     files.reverse();
 
@@ -20,7 +17,7 @@ pub async fn has_illegal_files(
     // TODO: use iterator
     for file in files {
         if is_illegal_file(file, state.clone()).await {
-            return true
+            return true;
         }
     }
 
@@ -33,19 +30,23 @@ pub async fn has_illegal_files(
 pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
     // Request the file from Telegram
     let file = match state
-            .telegram_client()
-            .send_timeout(file, Duration::from_secs(30))
-            // TODO: do not drop error here
-            .map_err(|err| {
-                dbg!(err);
-                ()
-            })
-            .await {
+        .telegram_client()
+        .send_timeout(file, Duration::from_secs(30))
+        // TODO: do not drop error here
+        .map_err(|err| {
+            dbg!(err);
+            ()
+        })
+        .await
+    {
         Ok(file) => file,
         Err(err) => {
-            println!("failed to request file URL from Telegram, ignoring: {:?}", err);
+            println!(
+                "failed to request file URL from Telegram, ignoring: {:?}",
+                err
+            );
             return false;
-        },
+        }
     };
 
     // Request the file URL
@@ -69,9 +70,12 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         let (_file, path) = match util::download::download_temp(&url).await {
             Ok(response) => response,
             Err(err) => {
-                println!("failed to download Telegram file to test for illegal content, ignoring: {:?}", err);
+                println!(
+                    "failed to download Telegram file to test for illegal content, ignoring: {:?}",
+                    err
+                );
                 return false;
-            },
+            }
         };
 
         // Test whether the image file is illegal

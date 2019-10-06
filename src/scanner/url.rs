@@ -34,7 +34,7 @@ async fn is_illegal_url(url: Url) -> Result<(), ()> {
     // Follow URL redirects
     match util::url::follow_url(&url).await {
         Ok(ref url) if is_illegal_static_url(url) => Ok(()),
-	Ok(_) => Err(()),
+        Ok(_) => Err(()),
         Err(err) => {
             // TODO: do not drop error here
             dbg!(err);

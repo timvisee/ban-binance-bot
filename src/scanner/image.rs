@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use dssim::Dssim;
@@ -90,13 +90,16 @@ async fn matches_illegal_template(path: &Path) -> bool {
 
     // Test image for matches with templates, return on first match
     read_dir
-        .filter_map(|template_path| future::ready(
-            template_path.or_else(|err| {
-                println!("failed to read illegal image template: {}", err);
-                Err(())
-            })
-            .ok()
-        ))
+        .filter_map(|template_path| {
+            future::ready(
+                template_path
+                    .or_else(|err| {
+                        println!("failed to read illegal image template: {}", err);
+                        Err(())
+                    })
+                    .ok(),
+            )
+        })
         .map(|template_path| match_image(&path, template_path.path()).boxed())
         .buffer_unordered(num_cpus::get())
         .filter(|illegal| future::ready(*illegal))

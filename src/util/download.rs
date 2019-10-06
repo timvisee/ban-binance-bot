@@ -40,11 +40,7 @@ pub async fn download_temp(url: &str) -> Result<(File, TempPath), Error> {
     // TODO: check status code
 
     // Make the request, obtain the repsonse
-    let mut response = client
-        .get(url)
-        .send()
-        .map_err(Error::Request)
-        .await?;
+    let mut response = client.get(url).send().map_err(Error::Request).await?;
 
     // Write response body chunks to file
     while let Some(chunk) = response.chunk().map_err(Error::Request).await? {

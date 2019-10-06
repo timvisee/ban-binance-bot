@@ -1,12 +1,6 @@
 use telegram_bot::{
-    types::{
-        requests::get_file::GetFile,
-        ChannelPost,
-        Message,
-        MessageKind,
-        MessageOrChannelPost,
-    },
     prelude::CanGetFile,
+    types::{requests::get_file::GetFile, ChannelPost, Message, MessageKind, MessageOrChannelPost},
 };
 
 /// A trait to obtain text from a message.
@@ -95,11 +89,9 @@ impl MessageGetFiles for MessageKind {
             MessageKind::Text { .. } => None,
             MessageKind::Audio { data } => Some(vec![data.get_file()]),
             MessageKind::Document { data, .. } => Some(vec![data.get_file()]),
-            MessageKind::Photo { data, .. } => Some(data
-                .into_iter()
-                .map(|f| f.get_file())
-                .collect()
-            ),
+            MessageKind::Photo { data, .. } => {
+                Some(data.into_iter().map(|f| f.get_file()).collect())
+            }
             MessageKind::Sticker { data } => Some(vec![data.get_file()]),
             MessageKind::Video { data, .. } => Some(vec![data.get_file()]),
             MessageKind::Voice { data } => Some(vec![data.get_file()]),
@@ -110,11 +102,9 @@ impl MessageGetFiles for MessageKind {
             MessageKind::NewChatMembers { .. } => None,
             MessageKind::LeftChatMember { .. } => None,
             MessageKind::NewChatTitle { .. } => None,
-            MessageKind::NewChatPhoto { data } => Some(data
-                .into_iter()
-                .map(|f| f.get_file())
-                .collect()
-            ),
+            MessageKind::NewChatPhoto { data } => {
+                Some(data.into_iter().map(|f| f.get_file()).collect())
+            }
             MessageKind::DeleteChatPhoto => None,
             MessageKind::GroupChatCreated => None,
             MessageKind::SupergroupChatCreated => None,

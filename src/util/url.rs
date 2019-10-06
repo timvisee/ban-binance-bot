@@ -40,10 +40,7 @@ pub async fn follow_url(url: &Url) -> Result<Url, FollowError> {
     println!("Checking URL for redirects: {}", url.as_str());
 
     // Send the request, follow the URL
-    let response = client
-        .get(url.as_str())
-        .send()
-        .await;
+    let response = client.get(url.as_str()).send().await;
 
     // TODO: validate status !response.status.is_success()
 

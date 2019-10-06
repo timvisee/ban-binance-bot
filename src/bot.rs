@@ -1,5 +1,5 @@
 use futures::prelude::*;
-use telegram_bot::{types::Message, prelude::*, *};
+use telegram_bot::{prelude::*, types::Message, *};
 use took::Timer;
 
 use crate::{scanner, state::State, traits::*, util};
@@ -20,8 +20,10 @@ pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
             UpdateKind::Message(msg) => match &msg.chat {
                 MessageChat::Private(..) => {
                     handle_private(&state, &msg).await?;
-                },
-                _ => {handle_message(msg, state.clone()).await?;},
+                }
+                _ => {
+                    handle_message(msg, state.clone()).await?;
+                }
             },
             UpdateKind::EditedMessage(msg) => {
                 handle_message(msg, state.clone()).await?;
@@ -79,7 +81,11 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     state
         .telegram_client()
         .send(
-            status.edit_text(format!("{}\n\n*Message audit:*\n{}\n\n_Audit took {}._", status_text, legality_text, took))
+            status
+                .edit_text(format!(
+                    "{}\n\n*Message audit:*\n{}\n\n_Audit took {}._",
+                    status_text, legality_text, took
+                ))
                 .parse_mode(ParseMode::Markdown)
                 .disable_preview(),
         )
@@ -102,7 +108,10 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     let chat = &msg.chat;
 
     // Attempt to kick the user, and delete their message
-    let kick_user = state.telegram_client().send(msg.from.kick_from(&chat)).await;
+    let kick_user = state
+        .telegram_client()
+        .send(msg.from.kick_from(&chat))
+        .await;
     let _ = state.telegram_client().send(msg.delete()).await;
 
     // Build the notification to share in the chat
@@ -130,7 +139,10 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                 .disable_notification(),
         )
         .map_err(|err| {
-            eprintln!("Failed to send ban notification in chat, ignoring...\n{:?}", err);
+            eprintln!(
+                "Failed to send ban notification in chat, ignoring...\n{:?}",
+                err
+            );
             ()
         })
         .await;
