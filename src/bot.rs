@@ -43,7 +43,8 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
         msg.text().unwrap_or_else(|| "?".into())
     );
 
-    state
+    // Post a generic direct message status
+    let _ = state
         .telegram_client()
         .send(
             msg.text_reply(format!(
@@ -58,7 +59,28 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
         )
         // TODO: do not drop error here
         .map(|_| Ok(()))
-        .await
+        .await?;
+
+    // Test message for legality
+    let illegal = is_illegal_message(msg.clone(), state.clone()).await;
+
+    // Post a generic direct message status
+    let _ = state
+        .telegram_client()
+        .send(
+            msg.text_reply(if illegal {
+                format!("This message is considered to be Binance spam!\n\nIt would deleted automatically by this bot, in groups this bot is added in.")
+            } else {
+                format!("This message is safe, and not categorized as Binance spam.")
+            })
+            .parse_mode(ParseMode::Markdown)
+            .disable_preview(),
+        )
+        // TODO: do not drop error here
+        .map(|_| Ok(()))
+        .await?;
+
+    Ok(())
 }
 
 /// Handle the given message.
