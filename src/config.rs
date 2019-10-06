@@ -15,6 +15,23 @@ pub const ILLEGAL_HOSTS: [&str; 10] = [
 /// A list of illegal URL host parts.
 pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysolution"];
 
+/// A list of illegal text.
+pub const ILLEGAL_TEXT: [&str; 5] = [
+    "Celebrating Our New Crypto Exchange",
+    "Binance is pleased to announce the unmatched trading",
+    "To celebrate the launch of Binance US",
+    "Event ends today!",
+    "First 5000 Participants Bonus",
+    // "Вinаⴖce US",
+    // "Βἱnаⴖcе US",
+    // "𐌉МΡOR𐌕АΝΤ",
+    // "ⵏMР𐩒RΤΑNТ",
+    // "𐌏ⴖƖγ thе fіr𐑈t 5000 u𐑈егs wἱƖƖ be гewardеd",
+    // "OnƖy the fἰгѕt 5000 u𐑈егѕ ԝіlƖ ƅe reԝаrdеd",
+    // "ⴹνеⴖt еnd𐑈 tоԁау!",
+    // "Ενеⴖt ends tоԁаγ!",
+];
+
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [

@@ -70,7 +70,7 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     let illegal = is_illegal_message(msg.clone(), state.clone()).await;
     let took = timer.took();
     let legality_text = if illegal {
-        format!("_Your message is unsafe, and is considered to be Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
+        format!("_Your message is unsafe, and is considered to contain Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
     } else {
         format!("_Your message is safe, and is not seen as Binance spam.\nSend me something else to test._")
     };
@@ -79,7 +79,7 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     state
         .telegram_client()
         .send(
-            status.edit_text(format!("{}\n\n*Message audit:*\n{}\n\n_Auditing took {}._", status_text, legality_text, took))
+            status.edit_text(format!("{}\n\n*Message audit:*\n{}\n\n_Audit took {}._", status_text, legality_text, took))
                 .parse_mode(ParseMode::Markdown)
                 .disable_preview(),
         )
