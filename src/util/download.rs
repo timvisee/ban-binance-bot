@@ -12,7 +12,7 @@ use tempfile::{Builder, TempPath};
 /// The actual downloaded file is automatically deleted from disk when the last file handle
 /// (`File`) is dropped. See `tempfile::NamedTempFile` for more details.
 // TODO: make this properly async, the download process isn't at this moment
-pub async fn download_temp(url: &str) -> Result<(File, TempPath), ()> {
+pub async fn download_temp(url: &str) -> Result<(File, TempPath), Error> {
     // Build the download client
     // TODO: use a global client instance
     let client = Client::builder()
@@ -43,27 +43,31 @@ pub async fn download_temp(url: &str) -> Result<(File, TempPath), ()> {
     let mut response = client
         .get(url)
         .send()
-        // TODO: do not drop error here
-        .map_err(|err| {
-            dbg!(err);
-            ()
-        })
+        .map_err(Error::Request)
         .await?;
 
     // Write response body chunks to file
-    // TODO: do not drop errors here
-    while let Some(chunk) = response.chunk().map_err(|err| {
-        dbg!(err);
-        ()
-    }).await? {
-        file.write_all(&chunk).map_err(|err| {
-            eprintln!("Failed to write chunk to file being downloaded: {}", err);
-            ()
-        })?;
+    while let Some(chunk) = response.chunk().map_err(Error::Request).await? {
+        file.write_all(&chunk).map_err(Error::Write)?;
     }
 
     // Force sync the file
     let _ = file.sync_all();
 
     Ok((file, path))
+}
+
+/// Represents a download error.
+#[derive(Debug)]
+pub enum Error {
+    /// Download request error.
+    ///
+    /// An error has occurred while making the download request, or while fetching the download
+    /// chunks.
+    Request(reqwest::Error),
+
+    /// Download write error.
+    ///
+    /// Failed to write the file chunks being downloaded to a file on disk.
+    Write(std::io::Error),
 }

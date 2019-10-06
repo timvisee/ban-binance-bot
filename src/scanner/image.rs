@@ -11,63 +11,61 @@ use tempfile::TempPath;
 use crate::{config::*, scanner, util};
 
 /// Check whether the given image is illegal.
-pub async fn is_illegal_image(path: Arc<TempPath>) -> Result<bool, ()> {
+pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
     println!("Checking image {:?}...", path);
 
     // Check for illegal text in images
     #[cfg(feature = "ocr")]
     {
-        if has_illegal_text(path.clone()).await? {
-            return Ok(true);
+        if has_illegal_text(path.clone()).await {
+            return true;
         }
     }
 
     // Check whteher the image matches any of the illegal paths
-    Ok(matches_illegal_template(&path).await)
+    matches_illegal_template(&path).await
 }
 
 /// Check whether the images contains any illegal text, with an OCR check.
 #[cfg(feature = "ocr")]
-async fn has_illegal_text(path: Arc<TempPath>) -> Result<bool, ()> {
-    Ok(false)
+async fn has_illegal_text(path: Arc<TempPath>) -> bool {
+    // Get the path as a string
+    let path = match path.to_str() {
+        Some(path) => path,
+        None => {
+            println!("failed to obtain image path as text for OCR check, ignoring...");
+            return false;
+        }
+    };
 
-    // // Get the path as a string
-    // let path = match path.to_str() {
-    //     Some(path) => path,
-    //     None => {
-    //         println!("failed to obtain image path as text for OCR check, ignoring...");
-    //         return Ok(false);
-    //     }
-    // };
+    // Construct OCR reader
+    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+    lt.set_image(path);
 
-    // // Construct OCR reader
-    // let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    // lt.set_image(path);
+    // Read text from image
+    println!("Scanning for illegal text in image with OCR...");
+    let text = match lt.get_utf8_text() {
+        Ok(text) => text,
+        Err(err) => {
+            println!("failed to OCR: {}", err);
+            return false;
+        }
+    };
 
-    // // Read text from image
-    // println!("Scanning for illegal text in image with OCR...");
-    // let text = match lt.get_utf8_text() {early return on early return on 
-    //     Ok(text) => text,
-    //     Err(err) => {
-    //         println!("failed to OCR: {}", err);
-    //         return Ok(false);
-    //     }
-    // };
+    // Trim and lowercase
+    let text = text.trim().to_lowercase();
 
-    // // Trim and lowercase
-    // let text = text.trim().to_lowercase();
+    // Match the URL against a list of banned host parts
+    let illegal = ILLEGAL_IMAGE_TEXT
+        .iter()
+        .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
+    if illegal {
+        println!("Found illegal text in image!");
+        return true;
+    }
 
-    // // Match the URL against a list of banned host parts
-    // let illegal = ILLEGAL_IMAGE_TEXT
-    //     .iter()
-    //     .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
-    // if illegal {
-    //     println!("Found illegal text in image!");
-    //     return Ok(true);
-    // }
-
-    // // Scan for generic illegal text as well, return the result
-    // scanner::text::is_illegal_text(text).await
+    // Scan for generic illegal text as well, return the result
+    scanner::text::is_illegal_text(text).await
 }
 
 /// Check whether an image matches an illegal image template.

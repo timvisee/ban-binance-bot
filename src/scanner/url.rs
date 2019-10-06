@@ -6,16 +6,16 @@ use crate::{config::*, util};
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub async fn contains_illegal_urls(text: &str) -> Result<bool, ()> {
+pub async fn contains_illegal_urls(text: &str) -> bool {
     // Find URLs in the message, return if there are none
     let urls = util::url::find_urls(text);
     if urls.is_empty() {
-        return Ok(false);
+        return false;
     }
 
     // Test each URL concurrently
     let test_urls = urls.into_iter().map(|u| is_illegal_url(u).boxed());
-    Ok(futures::future::select_ok(test_urls).await.is_ok())
+    futures::future::select_ok(test_urls).await.is_ok()
 }
 
 /// Check whether the given URL is illegal.

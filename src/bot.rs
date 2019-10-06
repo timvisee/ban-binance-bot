@@ -66,7 +66,7 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
 /// This checks if the message is illegal, and immediately bans the sender if it is.
 async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Return if not illegal, ban user otherwise
-    if !is_illegal_message(msg.clone(), state.clone()).await? {
+    if !is_illegal_message(msg.clone(), state.clone()).await {
         return Ok(());
     }
 
@@ -112,22 +112,22 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 }
 
 /// Check whether the given message is illegal.
-async fn is_illegal_message(msg: Message, state: State) -> Result<bool, ()> {
+async fn is_illegal_message(msg: Message, state: State) -> bool {
     // TODO: run check futures concurrently
 
     // Check message text
     if let Some(text) = msg.text() {
-        if scanner::text::is_illegal_text(text).await? {
-            return Ok(true);
+        if scanner::text::is_illegal_text(text).await {
+            return true;
         }
     }
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.files() {
-        if scanner::file::has_illegal_files(files, state).await? {
-            return Ok(true);
+        if scanner::file::has_illegal_files(files, state).await {
+            return true;
         }
     }
 
-    Ok(false)
+    false
 }
