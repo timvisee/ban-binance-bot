@@ -1,5 +1,6 @@
 use futures::prelude::*;
 use telegram_bot::{types::Message, prelude::*, *};
+use took::Timer;
 
 use crate::{scanner, state::State, traits::*, util};
 
@@ -56,14 +57,19 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     let status = state
         .telegram_client()
         .send(
-            msg.text_reply(&status_text).parse_mode(ParseMode::Markdown).disable_preview(),
+            msg.text_reply(format!("{}\n\n_Auditing your message..._", status_text))
+                .parse_mode(ParseMode::Markdown)
+                .disable_preview(),
         )
         // TODO: do not drop error here
         .map_err(|_| ())
         .await?;
 
     // Test message for legality, and build legality text
-    let legality_text = if is_illegal_message(msg.clone(), state.clone()).await {
+    let timer = Timer::new();
+    let illegal = is_illegal_message(msg.clone(), state.clone()).await;
+    let took = timer.took();
+    let legality_text = if illegal {
         format!("_Your message is unsafe, and is considered to be Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
     } else {
         format!("_Your message is safe, and is not seen as Binance spam.\nSend me something else to test._")
@@ -73,7 +79,7 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     state
         .telegram_client()
         .send(
-            status.edit_text(format!("{}\n\n{}", status_text, legality_text))
+            status.edit_text(format!("{}\n\n*Message audit:*\n{}\n\n_Auditing took {}._", status_text, legality_text, took))
                 .parse_mode(ParseMode::Markdown)
                 .disable_preview(),
         )
