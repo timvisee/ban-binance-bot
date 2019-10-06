@@ -1,5 +1,5 @@
 use futures::prelude::*;
-use telegram_bot::{types::Message, *};
+use telegram_bot::{types::Message, prelude::*, *};
 
 use crate::{scanner, state::State, traits::*, util};
 
@@ -43,44 +43,43 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
         msg.text().unwrap_or_else(|| "?".into())
     );
 
-    // Post a generic direct message status
-    let _ = state
+    // Define the status text
+    let status_text = format!(
+        "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
+        {}, add me to a group to start banning Binance advertising bots.\n\n\
+        [» How does it work?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-does-it-work)\n\
+        [» How to use?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use)",
+        msg.from.first_name,
+    );
+
+    // Post the status message
+    let status = state
         .telegram_client()
         .send(
-            msg.text_reply(format!(
-                "`BLEEP BLOOP`\n`I AM A BOT`\n\n\
-                {}, add me to a group to start banning Binance advertising bots.\n\n\
-                [» How does it work?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-does-it-work)\n\
-                [» How to use?](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use)",
-                msg.from.first_name,
-            ))
-            .parse_mode(ParseMode::Markdown)
-            .disable_preview(),
+            msg.text_reply(&status_text).parse_mode(ParseMode::Markdown).disable_preview(),
+        )
+        // TODO: do not drop error here
+        .map_err(|_| ())
+        .await?;
+
+    // Test message for legality, and build legality text
+    let legality_text = if is_illegal_message(msg.clone(), state.clone()).await {
+        format!("_Your message is unsafe, and is considered to be Binance spam!\nThe message would be deleted automatically by this bot in groups the bot is added in._")
+    } else {
+        format!("_Your message is safe, and is not seen as Binance spam.\nSend me something else to test._")
+    };
+
+    // Post a generic direct message status
+    state
+        .telegram_client()
+        .send(
+            status.edit_text(format!("{}\n\n{}", status_text, legality_text))
+                .parse_mode(ParseMode::Markdown)
+                .disable_preview(),
         )
         // TODO: do not drop error here
         .map(|_| Ok(()))
-        .await?;
-
-    // Test message for legality
-    let illegal = is_illegal_message(msg.clone(), state.clone()).await;
-
-    // Post a generic direct message status
-    let _ = state
-        .telegram_client()
-        .send(
-            msg.text_reply(if illegal {
-                format!("This message is considered to be Binance spam!\n\nIt would deleted automatically by this bot, in groups this bot is added in.")
-            } else {
-                format!("This message is safe, and not categorized as Binance spam.")
-            })
-            .parse_mode(ParseMode::Markdown)
-            .disable_preview(),
-        )
-        // TODO: do not drop error here
-        .map(|_| Ok(()))
-        .await?;
-
-    Ok(())
+        .await
 }
 
 /// Handle the given message.
