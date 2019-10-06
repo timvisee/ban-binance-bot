@@ -35,20 +35,24 @@ pub fn matches_illegal_text(text: &str) -> bool {
 ///
 /// The `contains` value should only contain ASCII characters.
 fn contains_smart(text: &str, contains: &str) -> bool {
-    // Both must not be empty
-    if text.is_empty() || contains.is_empty() {
+    // Both must not be empty, contains must not be shorter
+    if text.is_empty() || contains.is_empty() || text.len() < contains.len() {
         return false;
     }
 
     // Compare
     let first = contains.chars().next().unwrap();
     if !text.chars()
+        .take(contains.len())
         .enumerate()
         .filter(|(_, c)| char_matches_smart(*c, first))
         .filter(|(i, _)| text.len() - i >= contains.len())
-        .any(|(i, _)| {
-            text.chars().skip(i).zip(contains.chars()).all(|(a, b)| char_matches_smart(a, b))
-        }) {
+        .any(|(i, _)| text
+             .chars()
+             .skip(i)
+             .zip(contains.chars())
+             .all(|(a, b)| char_matches_smart(a, b))
+        ) {
         return false;
     }
 

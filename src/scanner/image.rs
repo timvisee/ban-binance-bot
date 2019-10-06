@@ -108,6 +108,7 @@ async fn matches_illegal_template(path: &Path) -> bool {
 /// Check whether the images at the given two paths match.
 ///
 /// This operation is expensive.
+// TODO: make this as async as possible
 async fn match_image(path: &Path, template_path: PathBuf) -> bool {
     print!(
         "Matching illegal template '{}'...",

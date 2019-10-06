@@ -16,12 +16,13 @@ pub const ILLEGAL_HOSTS: [&str; 10] = [
 pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysolution"];
 
 /// A list of illegal text.
-pub const ILLEGAL_TEXT: [&str; 5] = [
+pub const ILLEGAL_TEXT: [&str; 6] = [
     "Celebrating Our New Crypto Exchange",
     "Binance is pleased to announce the unmatched trading",
     "To celebrate the launch of Binance US",
     "Event ends today!",
     "First 5000 Participants Bonus",
+    "Only the first 5000 users will be rewarded",
     // "Вinаⴖce US",
     // "Βἱnаⴖcе US",
     // "𐌉МΡOR𐌕АΝΤ",
