@@ -1,5 +1,5 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 13] = [
+pub const ILLEGAL_HOSTS: [&str; 12] = [
     "binance.eventonline.icu",
     "event.exchangelaunch.services",
     "exchange.bnblaunch.top",
@@ -11,12 +11,17 @@ pub const ILLEGAL_HOSTS: [&str; 13] = [
     "binance.dexsupport.site",
     "binance.mxevent.site",
     "mxevent.site",
-    "binance.com",
     "binance.us",
 ];
 
 /// A list of illegal URL host parts.
-pub const ILLEGAL_HOST_PARTS: [&str; 3] = ["binance", "jerseyonline", "jerseysolution"];
+pub const ILLEGAL_HOST_PARTS: [&str; 5] = [
+    "binance.event",
+    "binance.exchange",
+    "binance.jersey",
+    "jerseyonline",
+    "jerseysolution",
+];
 
 /// A list of illegal text.
 pub const ILLEGAL_TEXT: [&str; 6] = [
