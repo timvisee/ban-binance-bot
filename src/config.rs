@@ -60,12 +60,17 @@ pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [
 pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
 
 /// The maximum file size in bytes of files to check for legality.
-pub const MAX_FILE_SIZE: i64 = 10 * 1024 * 1024;
+pub const MAX_FILE_SIZE: i64 = 100 * 1024 * 1024;
+
+/// The maximum file size in bytes of images to check for legality.
+pub const IMAGE_MAX_FILE_SIZE: i64 = 20 * 1024 * 1024;
 
 /// Images are illegal when their similarity to any template image is `<= threhold`.
 pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 
 /// The minimum number of pixels each image side must have.
+///
+/// This is for image matching. Image OCR will run on all images if enabled.
 pub const IMAGE_MIN_SIZE: u32 = 80;
 
 lazy_static! {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use futures::prelude::*;
-use telegram_bot::GetFile;
+use telegram_bot::types::{GetFile, File};
 
 use crate::{
     config::*,
@@ -48,39 +48,54 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
     };
 
     // Request the file URL
-    // TODO: do not error here
     let url = file.get_url(state.token()).expect("failed to get file URL");
 
     // Skip files that are too large
     match file.file_size {
-        Some(size) if size > MAX_FILE_SIZE => return false,
-        _ => {}
+        Some(size) if size > MAX_FILE_SIZE => {
+            println!("File to large to audit, ignoring");
+            return false;
+        },
+        _ => {},
     };
 
-    // Download image files based on extension to test for legality
+    // Download image files based on extension, audit them
     // TODO: better extension test
-    if url.ends_with(".jpg")
+    if (url.ends_with(".jpg")
         || url.ends_with(".jpeg")
         || url.ends_with(".png")
-        || url.ends_with(".webp")
+        || url.ends_with(".webp"))
+        && is_illegal_image(file, &url).await
     {
-        // Download the file to a temporary file to test on
-        let (_file, path) = match util::download::download_temp(&url).await {
-            Ok(response) => response,
-            Err(err) => {
-                println!(
-                    "failed to download Telegram file to test for illegal content, ignoring: {:?}",
-                    err
-                );
-                return false;
-            }
-        };
-
-        // Test whether the image file is illegal
-        if super::image::is_illegal_image(Arc::new(path)).await {
-            return true;
-        }
+        return true;
     }
 
     false
+}
+
+/// Check whether the given Telegram image is an illegal file.
+async fn is_illegal_image(file: File, url: &str) -> bool {
+    // Skip images that are too large
+    match file.file_size {
+        Some(size) if size > IMAGE_MAX_FILE_SIZE => {
+            println!("Image file size too large to audit, ignoring");
+            return false;
+        },
+        _ => {}
+    };
+
+    // Download the file to a temporary file to test on
+    let path = match util::download::download_temp(&url).await {
+        Ok(response) => response.1,
+        Err(err) => {
+            println!(
+                "Failed to download Telegram file to test for illegal content, ignoring: {:?}",
+                err
+            );
+            return false;
+        }
+    };
+
+    // Test whether the image file is illegal
+    super::image::is_illegal_image(Arc::new(path)).await
 }

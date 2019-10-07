@@ -1,5 +1,3 @@
-// TODO: filter too large files, limit to 20MB
-
 #[macro_use]
 extern crate lazy_static;
 
