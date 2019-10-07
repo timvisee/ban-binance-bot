@@ -4,24 +4,22 @@ use std::time::Duration;
 use futures::prelude::*;
 use telegram_bot::GetFile;
 
-use crate::{config::*, state::State, util};
+use crate::{
+    config::*,
+    state::State,
+    util::{self, future::select_true},
+};
 
 /// Check whether any of the given files is illegal.
 ///
 /// A list of `GetFile` requests is given, as the actual files should still be downloaded.
-pub async fn has_illegal_files(mut files: Vec<GetFile>, state: State) -> bool {
-    // TODO: reverse list of files here (pick biggest image first)?
-    files.reverse();
-
-    // Test all files in order, return if any is illegal
-    // TODO: use iterator
-    for file in files {
-        if is_illegal_file(file, state.clone()).await {
-            return true;
-        }
-    }
-
-    false
+pub async fn has_illegal_files(files: Vec<GetFile>, state: State) -> bool {
+    // Build a list of file checks, check them concurrently
+    select_true(
+        files
+        .into_iter()
+        .map(|file| is_illegal_file(file, state.clone()))
+    ).await
 }
 
 /// Check whether the given file is illegal.

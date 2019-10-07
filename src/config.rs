@@ -37,7 +37,8 @@ pub const ILLEGAL_TEXT: [&str; 6] = [
 ];
 
 /// A list of illegal text in webpage bodies.
-pub const ILLEGAL_WEBPAGE_TEXT: [&str; 6] = [
+pub const ILLEGAL_WEBPAGE_TEXT: [&str; 7] = [
+    "First 5000 Participants BTC Giveaway!",
     "Celebrating the launch of our new Crypto Marketplace - Binance US",
     "We are pleased to announce the unmatched trading technology platform of Binance to the United States and all of North America",
     "To celebrate the launch of Binance US, we are rewarding the first 5000 participants with 10 times deposit bonus",

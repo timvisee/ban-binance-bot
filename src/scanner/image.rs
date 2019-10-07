@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use dssim::Dssim;
@@ -8,48 +8,38 @@ use image::{imageops, FilterType};
 use num_cpus;
 use tempfile::TempPath;
 
-use crate::{config::*, scanner, util};
+use crate::{
+    config::*,
+    util::{self, future::select_true},
+};
+#[cfg(feature = "ocr")]
+use crate::scanner;
 
 /// Check whether the given image is illegal.
 pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
     println!("Checking image {:?}...", path);
 
+    // Build a list of checks to pass
+    #[allow(unused_mut)]
+    let mut checks = vec![
+        matches_illegal_template(path.clone()).boxed(),
+    ];
+
     // Check for illegal text in images
     #[cfg(feature = "ocr")]
-    {
-        if has_illegal_text(path.clone()).await {
-            return true;
-        }
-    }
+    checks.push(has_illegal_text(path.clone()).boxed());
 
-    // Check whteher the image matches any of the illegal paths
-    matches_illegal_template(&path).await
+    // Run checks
+    select_true(checks).await
 }
 
 /// Check whether the images contains any illegal text, with an OCR check.
 #[cfg(feature = "ocr")]
 async fn has_illegal_text(path: Arc<TempPath>) -> bool {
-    // Get the path as a string
-    let path = match path.to_str() {
-        Some(path) => path,
-        None => {
-            println!("failed to obtain image path as text for OCR check, ignoring...");
-            return false;
-        }
-    };
-
-    // Construct OCR reader
-    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    lt.set_image(path);
-
     // Read text from image
-    println!("Scanning for illegal text in image with OCR...");
-    let text = match lt.get_utf8_text() {
+    let text = match util::image::read_text(path).await {
         Ok(text) => text,
-        Err(err) => {
-            println!("failed to OCR: {}", err);
-            return false;
-        }
+        Err(_) => return false,
     };
 
     // Trim and lowercase
@@ -75,7 +65,7 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
 ///
 /// True is returned if the image is illegal, false if not.
 /// On error, false is returned as it is assumed the image is allowed.
-async fn matches_illegal_template(path: &Path) -> bool {
+async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
     // Create a directory reader to list all image templates
     let read_dir = match tokio::fs::read_dir(ILLEGAL_IMAGES_DIR).await {
         Ok(read_dir) => read_dir,
@@ -90,30 +80,32 @@ async fn matches_illegal_template(path: &Path) -> bool {
 
     // Test image for matches with templates, return on first match
     read_dir
-        .filter_map(|template_path| {
-            future::ready(
-                template_path
-                    .or_else(|err| {
-                        println!("failed to read illegal image template: {}", err);
-                        Err(())
-                    })
-                    .ok(),
-            )
-        })
-        .map(|template_path| match_image(&path, template_path.path()).boxed())
-        .buffer_unordered(num_cpus::get())
-        .filter(|illegal| future::ready(*illegal))
-        .next()
-        .await
-        .is_some()
+            .filter_map(|template_path| {
+                future::ready(
+                    template_path
+                        .or_else(|err| {
+                            println!("failed to read illegal image template: {}", err);
+                            Err(())
+                        })
+                        .ok(),
+                )
+            })
+            .map(|template_path| {
+                let path = path.clone();
+                tokio_executor::blocking::run(move || match_image(path, template_path.path())).boxed()
+            })
+            .buffer_unordered(num_cpus::get())
+            .filter(|illegal| future::ready(*illegal))
+            .next()
+            .await
+            .is_some()
 }
 
 /// Check whether the images at the given two paths match.
 ///
 /// This operation is expensive.
-// TODO: make this as async as possible
-async fn match_image(path: &Path, template_path: PathBuf) -> bool {
-    print!(
+fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
+    println!(
         "Matching illegal template '{}'...",
         template_path
             .file_name()
@@ -123,7 +115,7 @@ async fn match_image(path: &Path, template_path: PathBuf) -> bool {
 
     // Load the images
     let template_image = image::open(template_path).expect("failed to open base");
-    let image = match image::open(path) {
+    let image = match image::open(path.as_ref()) {
         Ok(image) => image,
         Err(err) => {
             eprintln!("failed to open downloaded image, ignoring: {}", err);
@@ -152,9 +144,9 @@ async fn match_image(path: &Path, template_path: PathBuf) -> bool {
     let is_similar = score <= IMAGE_BAN_THRESHOLD;
 
     if is_similar {
-        println!(" Illegal! (score: {})", score);
+        println!("Matched image is illegal! (score: {})", score);
     } else {
-        println!(" (score: {})", score);
+        println!("Matched image is legal (score: {})", score);
     }
 
     is_similar

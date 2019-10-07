@@ -86,6 +86,7 @@ dependencies = [
  "telegram-bot 0.6.3 (git+https://github.com/telegram-rs/telegram-bot?rev=ee6c3f6)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-executor 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-fs 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "took 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",

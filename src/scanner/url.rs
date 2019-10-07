@@ -1,10 +1,12 @@
 use std::time::Duration;
 
-use futures::prelude::*;
 use reqwest::{r#async::Client, RedirectPolicy};
 use url::Url;
 
-use crate::{config::*, util};
+use crate::{
+    config::*,
+    util::{self, future::select_true},
+};
 
 /// Check whether the given text contains any illegal URLs.
 ///
@@ -17,8 +19,7 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
     }
 
     // Test each URL concurrently
-    let test_urls = urls.into_iter().map(|u| is_illegal_url(u).boxed());
-    futures::future::select_ok(test_urls).await.is_ok()
+    select_true(urls.into_iter().map(is_illegal_url)).await
 }
 
 /// Check whether the given URL is illegal.
@@ -28,15 +29,15 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
 /// Returns `Ok` if the URL is illegal, `Err` otherwise.
 /// Errors are silently dropped and it will then be assumed that the URL is allowed.
 /// This allows the use of `futures::future::select_ok`.
-async fn is_illegal_url(mut url: Url) -> Result<(), ()> {
+async fn is_illegal_url(mut url: Url) -> bool {
     // The given URL must not be illegal
     if is_illegal_static_url(&url) {
-        return Ok(());
+        return true;
     }
 
     // Follow URL redirects
     match util::url::follow_url(&url).await {
-        Ok(ref url) if is_illegal_static_url(url) => return Ok(()),
+        Ok(ref url) if is_illegal_static_url(url) => return true,
         Ok(new) => url = new,
         Err(err) => println!("failed to follow URL redirects to audit, ignoring: {:?}", err),
     }
@@ -44,10 +45,10 @@ async fn is_illegal_url(mut url: Url) -> Result<(), ()> {
     // Check whether the webpage contains illegal content
     if url_has_illegal_webpage_content(&url).await {
         println!("Webpage has illegal body! {}", url);
-        Ok(())
-    } else {
-        Err(())
+        return true;
     }
+
+    false
 }
 
 /// Check whether the given URL routes to illegal content.
@@ -117,7 +118,7 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
         .iter()
         .any(|illegal_host| illegal_host == &host)
     {
-        println!("Found illegal host (on illegal host)!");
+        println!("Found illegal host! {}", url);
         return true;
     }
 
@@ -126,7 +127,7 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
         .iter()
         .any(|illegal_part| host.contains(illegal_part));
     if illegal {
-        println!("Found illegal host (contains illegal part)!");
+        println!("Found illegal host (contains illegal part)! {}", url);
         return true;
     }
 

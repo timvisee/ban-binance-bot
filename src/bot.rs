@@ -2,7 +2,11 @@ use futures::prelude::*;
 use telegram_bot::{prelude::*, types::Message, *};
 use took::Timer;
 
-use crate::{scanner, state::State, util};
+use crate::{
+    scanner,
+    state::State,
+    util::{self, future::select_true},
+};
 
 /// Build a future for handling Telegram API updates.
 // TODO: handle update errors here
@@ -152,21 +156,17 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 
 /// Check whether the given message is illegal.
 async fn is_illegal_message(msg: Message, state: State) -> bool {
-    // TODO: run check futures concurrently
+    let mut checks = vec![];
 
     // Check message text
     if let Some(text) = msg.text() {
-        if scanner::text::is_illegal_text(text).await {
-            return true;
-        }
+        checks.push(scanner::text::is_illegal_text(text).boxed());
     }
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.get_files() {
-        if scanner::file::has_illegal_files(files, state).await {
-            return true;
-        }
+        checks.push(scanner::file::has_illegal_files(files, state).boxed());
     }
 
-    false
+    select_true(checks).await
 }
