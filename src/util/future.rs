@@ -10,8 +10,14 @@ pub async fn select_true<I>(iter: I) -> bool
     where I: IntoIterator,
           I::Item: Future<Output = bool> + Send,
 {
+    // Collect the list, ensure there's at least one future to complete
+    let list: Vec<_> = iter.into_iter().collect();
+    if list.is_empty() {
+        return false;
+    }
+
     futures::future::select_ok(
-        iter.into_iter().map(|f| btr(f).boxed()),
+        list.into_iter().map(|f| btr(f).boxed()),
     ).await.is_ok()
 }
 
