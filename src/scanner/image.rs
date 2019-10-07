@@ -5,7 +5,6 @@ use dssim::Dssim;
 use futures::{future, prelude::*};
 use image::GenericImageView;
 use image::{imageops, FilterType};
-use num_cpus;
 use tempfile::TempPath;
 
 use crate::{
@@ -94,7 +93,7 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
                 let path = path.clone();
                 tokio_executor::blocking::run(move || match_image(path, template_path.path())).boxed()
             })
-            .buffer_unordered(num_cpus::get())
+            .buffer_unordered(*IMAGE_CONCURRENT_MATCHES)
             .filter(|illegal| future::ready(*illegal))
             .next()
             .await

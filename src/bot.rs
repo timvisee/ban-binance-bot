@@ -3,6 +3,7 @@ use telegram_bot::{prelude::*, types::{Message, Update, MessageChat, UpdateKind,
 use took::Timer;
 
 use crate::{
+    config::*,
     scanner,
     state::State,
     util::{self, future::select_true},
@@ -15,7 +16,7 @@ pub async fn build_telegram_handler(state: State) -> Result<(), UpdateError> {
         .telegram_client()
         .stream()
         .map(|update| handle_update(state.clone(), update))
-        .buffer_unordered(num_cpus::get());
+        .buffer_unordered(*TELEGRAM_CONCURRENT_UPDATES);
 
     // Run the update stream to completion
     while let Some(update) = stream.next().await {

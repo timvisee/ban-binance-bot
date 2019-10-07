@@ -1,5 +1,7 @@
 // TODO: filter too large files, limit to 20MB
-// TODO: filter too small images
+
+#[macro_use]
+extern crate lazy_static;
 
 use dotenv::dotenv;
 use state::State;

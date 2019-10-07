@@ -67,3 +67,14 @@ pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 
 /// The minimum number of pixels each image side must have.
 pub const IMAGE_MIN_SIZE: u32 = 80;
+
+lazy_static! {
+    /// Number of Telegram API updates to process concurrently.
+    pub static ref TELEGRAM_CONCURRENT_UPDATES: usize = num_cpus::get().max(2);
+
+    /// Number of images to match at the same time.
+    ///
+    /// This is the maximum number of matches to run concurrently for each image against the list
+    /// of banned image templates.
+    pub static ref IMAGE_CONCURRENT_MATCHES: usize = num_cpus::get();
+}
