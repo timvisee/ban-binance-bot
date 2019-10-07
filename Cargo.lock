@@ -78,7 +78,7 @@ dependencies = [
  "image 0.22.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgref 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "leptess 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "leptess 0.6.0 (git+https://github.com/timvisee/leptess?rev=e573278)",
  "linkify 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.0-alpha.0 (git+https://github.com/seanmonstar/reqwest?rev=5b55aee)",
@@ -754,7 +754,7 @@ dependencies = [
 [[package]]
 name = "leptess"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/timvisee/leptess?rev=e573278#e573278c6857d31fd57877cd133f8f7681d544dc"
 dependencies = [
  "bindgen 0.49.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2190,7 +2190,7 @@ dependencies = [
 "checksum js-sys 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)" = "2cc9a97d7cec30128fd8b28a7c1f9df1c001ceb9b441e2b755e24130a6b43c79"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-"checksum leptess 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f0db7e3598414d334ea6f1d77a8c006578a456bc9a4399726cd5d7897cdf768f"
+"checksum leptess 0.6.0 (git+https://github.com/timvisee/leptess?rev=e573278)" = "<none>"
 "checksum libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)" = "34fcd2c08d2f832f376f4173a231990fa5aef4e99fb569867318a227ef4c06ba"
 "checksum libloading 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f2b111a074963af1d37a139918ac6d49ad1d0d5e47f72fd55388619691a7d753"
 "checksum linkify 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "03951527dd24d2c59f407502e7d88e0948ef06fac23335b556a4c2bc03c22096"
