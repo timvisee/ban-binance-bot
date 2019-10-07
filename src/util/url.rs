@@ -39,13 +39,9 @@ pub async fn follow_url(url: &Url) -> Result<Url, FollowError> {
 
     println!("Checking URL for redirects: {}", url.as_str());
 
-    // Send the request, follow the URL
-    let response = client.get(url.as_str()).send().await;
-
+    // Send the request, follow the URL, return target URL or last known URL from error
     // TODO: validate status !response.status.is_success()
-
-    // Return the target URL, or the last known URL on error
-    match response {
+    match client.get(url.as_str()).send().await {
         Ok(response) => Ok(response.url().clone()),
         Err(err) => err.url().cloned().ok_or(FollowError::Request(err)),
     }

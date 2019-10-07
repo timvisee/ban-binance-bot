@@ -36,6 +36,16 @@ pub const ILLEGAL_TEXT: [&str; 6] = [
     // "Ενеⴖt ends tоԁаγ!",
 ];
 
+/// A list of illegal text in webpage bodies.
+pub const ILLEGAL_WEBPAGE_TEXT: [&str; 6] = [
+    "Celebrating the launch of our new Crypto Marketplace - Binance US",
+    "We are pleased to announce the unmatched trading technology platform of Binance to the United States and all of North America",
+    "To celebrate the launch of Binance US, we are rewarding the first 5000 participants with 10 times deposit bonus",
+    "In order to be eligible, participants must have a minimum of 0.02 BTC",
+    "Only the first 5000 users will be rewarded and it's on a first come first served basis. Qualifying users will receive the deposit bonus along with an invitation link to beta test Binance US. Every bug/hack/problem found on Binance US will be rewarded up to 10 BTC (more details upon sign-up).",
+    "For every BTC contributed, you will receive back 10 times more BTC!",
+];
+
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [

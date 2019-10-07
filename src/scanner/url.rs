@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use futures::prelude::*;
+use reqwest::{r#async::Client, RedirectPolicy};
 use url::Url;
 
 use crate::{config::*, util};
@@ -33,14 +36,69 @@ async fn is_illegal_url(url: Url) -> Result<(), ()> {
 
     // Follow URL redirects
     match util::url::follow_url(&url).await {
-        Ok(ref url) if is_illegal_static_url(url) => Ok(()),
-        Ok(_) => Err(()),
-        Err(err) => {
-            // TODO: do not drop error here
-            dbg!(err);
-            Err(())
-        }
+        Ok(ref url) if is_illegal_static_url(url) => return Ok(()),
+        Ok(_) => {},
+        Err(err) => println!("failed to follow URL redirects to audit, ignoring: {:?}", err),
     }
+
+    // Check whether the webpage contains illegal content
+    if url_has_illegal_webpage_content(&url).await {
+        println!("Webpage has illegal body! {}", url);
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
+/// Check whether the given URL routes to illegal content.
+///
+/// This scans the body of the webpage that is responded with.
+async fn url_has_illegal_webpage_content(url: &Url) -> bool {
+    // Skip if there are no filters
+    if ILLEGAL_WEBPAGE_TEXT.is_empty() {
+        return false;
+    }
+
+    // Build the URL client
+    // TODO: use a global client instance
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)
+        .redirect(RedirectPolicy::limited(25))
+        .timeout(Duration::from_secs(15))
+        .connect_timeout(Duration::from_secs(20))
+        .build()
+        .expect("failed to build webpage body auditer client");
+
+    // Send the request, follow the URL
+    // TODO: validate status !response.status.is_success()
+    let response = match client.get(url.as_str()).send().await {
+        Ok(response) => response,
+        Err(err) => {
+            println!("failed to request webpage body bytes to audit, ignoring: {}", err);
+            return false;
+        },
+    };
+
+    // Request the page body
+    let body = match response.bytes().await {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            println!("failed to retrieve webpage body bytes to audit, ignoring: {}", err);
+            return false;
+        },
+    };
+
+    // Find the shortest needle to limit body searching
+    let needles = ILLEGAL_WEBPAGE_TEXT;
+    let shortest = needles.iter().map(|t| t.as_bytes().len()).min().unwrap();
+
+    // Scan body for needles to detect illegal content
+    (0..=body.len() - shortest)
+        .any(|i| needles
+            .iter()
+            .filter(|needle| needle.as_bytes().len() <= body.len() - i)
+            .any(|needle| &body[i..i + needle.len()] == needle.as_bytes())
+        )
 }
 
 /// Check wheher the given URL is illegal.
