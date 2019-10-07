@@ -1,5 +1,5 @@
 use futures::prelude::*;
-use telegram_bot::{prelude::*, types::Message, *};
+use telegram_bot::{prelude::*, types::{Message, Update, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
 use took::Timer;
 
 use crate::{
@@ -11,29 +11,39 @@ use crate::{
 /// Build a future for handling Telegram API updates.
 // TODO: handle update errors here
 pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
-    // Fetch new updates via long poll method
-    let mut stream = state.telegram_client().stream();
+    // Fetch new updates via long poll method, buffer to handle updates concurrently
+    let mut stream = state
+        .telegram_client()
+        .stream()
+        .map(|update| handle_update(state.clone(), update))
+        .buffer_unordered(num_cpus::get());
 
-    while let Some(update) = stream.next().await {
-        // Make sure we received a enw update
-        // TODO: do not drop error here
-        let update = update.map_err(|_| ())?;
+    // Run the update stream to completion
+    while let Some(_) = stream.next().await {}
 
-        // Process messages
-        match update.kind {
-            UpdateKind::Message(msg) => match &msg.chat {
-                MessageChat::Private(..) => {
-                    handle_private(&state, &msg).await?;
-                }
-                _ => {
-                    handle_message(msg, state.clone()).await?;
-                }
-            },
-            UpdateKind::EditedMessage(msg) => {
+    Ok(())
+}
+
+/// Handle the given Telegram API update.
+async fn handle_update(state: State, update: Result<Update, TelegramError>) -> Result<(), ()> {
+    // Make sure we received a enw update
+    // TODO: do not drop error here
+    let update = update.map_err(|_| ())?;
+
+    // Process messages
+    match update.kind {
+        UpdateKind::Message(msg) => match &msg.chat {
+            MessageChat::Private(..) => {
+                handle_private(&state, &msg).await?;
+            }
+            _ => {
                 handle_message(msg, state.clone()).await?;
             }
-            _ => {}
+        },
+        UpdateKind::EditedMessage(msg) => {
+            handle_message(msg, state.clone()).await?;
         }
+        _ => {}
     }
 
     Ok(())
