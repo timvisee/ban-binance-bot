@@ -21,7 +21,8 @@ pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
     // Build a list of checks to pass
     #[allow(unused_mut)]
     let mut checks = vec![
-        matches_illegal_template(path.clone()).boxed(),
+        // TODO: temporarily disable until memory leak is found
+        // matches_illegal_template(path.clone()).boxed(),
     ];
 
     // Check for illegal text in images
