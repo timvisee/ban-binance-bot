@@ -113,8 +113,7 @@ fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
             .unwrap_or("")
     );
 
-    // Load the images
-    let template_image = image::open(template_path).expect("failed to open base");
+    // Load the user image, return if it's too small
     let image = match image::open(path.as_ref()) {
         Ok(image) => image,
         Err(err) => {
@@ -122,6 +121,14 @@ fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
             return false;
         }
     };
+    let (x, y) = image.dimensions();
+    if x < IMAGE_MIN_SIZE || y < IMAGE_MIN_SIZE {
+        println!("Image too small to match against banned templates, ignoring");
+        return false;
+    }
+
+    // Load the template image
+    let template_image = image::open(template_path).expect("failed to open base");
 
     // Make the image we're testing the same size
     let (x, y) = template_image.dimensions();

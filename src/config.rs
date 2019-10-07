@@ -64,3 +64,6 @@ pub const MAX_FILE_SIZE: i64 = 10 * 1024 * 1024;
 
 /// Images are illegal when their similarity to any template image is `<= threhold`.
 pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
+
+/// The minimum number of pixels each image side must have.
+pub const IMAGE_MIN_SIZE: u32 = 80;
