@@ -55,7 +55,7 @@ async fn is_illegal_url(mut url: Url) -> bool {
 ///
 /// This scans the body of the webpage that is responded with.
 async fn url_has_illegal_webpage_content(url: &Url) -> bool {
-    // Skip if there are no filters
+    // We must have illegal webpage text configured
     if ILLEGAL_WEBPAGE_TEXT.is_empty() {
         return false;
     }
@@ -106,6 +106,11 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
 ///
 /// This checks the static URL, and does not do any redirect checking.
 pub fn is_illegal_static_url(url: &Url) -> bool {
+    // We must have illegal hosts or parts configured
+    if ILLEGAL_HOSTS.is_empty() && ILLEGAL_HOST_PARTS.is_empty() {
+        return false;
+    }
+
     // Get the host
     let host = match url.host_str() {
         Some(host) => host,

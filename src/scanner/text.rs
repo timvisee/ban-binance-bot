@@ -13,6 +13,11 @@ pub async fn is_illegal_text(text: String) -> bool {
 
 /// Check whether the text contains illegal parts.
 pub fn matches_illegal_text(text: &str) -> bool {
+    // We must have illegal text configured
+    if ILLEGAL_TEXT.is_empty() {
+        return false;
+    }
+
     // Normalize the text
     let text = text.trim().to_lowercase();
 
