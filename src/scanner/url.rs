@@ -28,7 +28,7 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
 /// Returns `Ok` if the URL is illegal, `Err` otherwise.
 /// Errors are silently dropped and it will then be assumed that the URL is allowed.
 /// This allows the use of `futures::future::select_ok`.
-async fn is_illegal_url(url: Url) -> Result<(), ()> {
+async fn is_illegal_url(mut url: Url) -> Result<(), ()> {
     // The given URL must not be illegal
     if is_illegal_static_url(&url) {
         return Ok(());
@@ -37,7 +37,7 @@ async fn is_illegal_url(url: Url) -> Result<(), ()> {
     // Follow URL redirects
     match util::url::follow_url(&url).await {
         Ok(ref url) if is_illegal_static_url(url) => return Ok(()),
-        Ok(_) => {},
+        Ok(new) => url = new,
         Err(err) => println!("failed to follow URL redirects to audit, ignoring: {:?}", err),
     }
 
