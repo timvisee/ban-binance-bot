@@ -10,8 +10,10 @@ mod scanner;
 mod state;
 mod util;
 
+use bot::UpdateError;
+
 #[tokio::main(multi_thread)]
-async fn main() -> Result<(), ()> {
+async fn main() -> Result<(), UpdateError> {
     // Load the environment variables file
     dotenv().ok();
 
@@ -20,7 +22,7 @@ async fn main() -> Result<(), ()> {
 
     // Build the application, attach signal handling
     let app = bot::build_telegram_handler(state.clone()).await;
-    match app {
+    match &app {
         Ok(_) => eprintln!("Bot quit successfully"),
         Err(err) => eprintln!("Bot quit with error!\n{:?}", err),
     }

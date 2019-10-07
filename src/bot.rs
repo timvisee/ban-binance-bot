@@ -9,8 +9,7 @@ use crate::{
 };
 
 /// Build a future for handling Telegram API updates.
-// TODO: handle update errors here
-pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
+pub async fn build_telegram_handler(state: State) -> Result<(), UpdateError> {
     // Fetch new updates via long poll method, buffer to handle updates concurrently
     let mut stream = state
         .telegram_client()
@@ -19,30 +18,29 @@ pub async fn build_telegram_handler(state: State) -> Result<(), ()> {
         .buffer_unordered(num_cpus::get());
 
     // Run the update stream to completion
-    while let Some(_) = stream.next().await {}
+    while let Some(update) = stream.next().await {
+        // Return errors
+        if update.is_err() {
+            return update;
+        }
+    }
 
     Ok(())
 }
 
 /// Handle the given Telegram API update.
-async fn handle_update(state: State, update: Result<Update, TelegramError>) -> Result<(), ()> {
+async fn handle_update(state: State, update: Result<Update, TelegramError>) -> Result<(), UpdateError> {
     // Make sure we received a enw update
     // TODO: do not drop error here
-    let update = update.map_err(|_| ())?;
+    let update = update.map_err(UpdateError::Telegram)?;
 
     // Process messages
     match update.kind {
         UpdateKind::Message(msg) => match &msg.chat {
-            MessageChat::Private(..) => {
-                handle_private(&state, &msg).await?;
-            }
-            _ => {
-                handle_message(msg, state.clone()).await?;
-            }
+            MessageChat::Private(..) => handle_private(&state, &msg).await?,
+            _ =>  handle_message(msg, state.clone()).await?,
         },
-        UpdateKind::EditedMessage(msg) => {
-            handle_message(msg, state.clone()).await?;
-        }
+        UpdateKind::EditedMessage(msg) => handle_message(msg, state.clone()).await?,
         _ => {}
     }
 
@@ -179,4 +177,20 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
     }
 
     select_true(checks).await
+}
+
+/// The update error kind.
+#[derive(Debug)]
+pub enum UpdateError {
+    /// An error occurred in the Telegram API.
+    Telegram(TelegramError),
+
+    /// An other update occurred.
+    Other,
+}
+
+impl From<()> for UpdateError {
+    fn from(_: ()) -> UpdateError {
+        UpdateError::Other
+    }
 }
