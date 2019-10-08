@@ -24,6 +24,7 @@ futures-preview = { version = "=0.3.0-alpha.19", features = ["async-await"] }
 image = "0.22"
 imgref = "1.4"
 lazy_static = "1.4"
+leptess = { version = "0.7", optional = true }
 linkify = "0.4"
 num_cpus = "1.0"
 rgb = "0.8"
@@ -44,9 +45,3 @@ rev = "ee6c3f6"
 version = "0.10.0-alpha.0"
 git = "https://github.com/seanmonstar/reqwest"
 rev = "5b55aee"
-
-[dependencies.leptess]
-version = "*"
-optional = true
-git = "https://github.com/timvisee/leptess"
-rev = "e573278"

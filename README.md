@@ -61,14 +61,14 @@ Build requirements:
 - Rust 1.39 (nightly, or higher) (via [rustup](https://rustup.rs): `rustup default nightly`)
 - Feature specific:
   - `ocr`: (default, scan images for illegal text)
-    - `tesseract` and `leptonica` libraries:
-      - Ubuntu: `sudo apt-get install libleptonica-dev libtesseract-dev`
+    - `tesseract`, `leptonica` libraries and `clang`:
+      - Ubuntu: `sudo apt-get install libleptonica-dev libtesseract-dev clang`
 
 Runtime requirements:
 - A Telegram bot token
 - Feature specific:
   - `ocr`: (default, scan images for illegal text)
-    - `tesseract` and `leptonica` libraries:
+    - `tesseract` data for English language:
       - Ubuntu: `sudo apt-get install tesseract-ocr-eng`
 
 ```bash
