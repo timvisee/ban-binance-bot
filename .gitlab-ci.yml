@@ -6,7 +6,7 @@ stages:
 
 # Variable defaults
 variables:
-  RUST_VERSION: nightly
+  RUST_VERSION: beta
 
 # # Cargo artifacts caching per Rust version and pipeline
 # cache:
@@ -32,15 +32,18 @@ before_script:
   stage: check
   script:
     - cargo check --verbose
+    - cargo check --verbose --no-default-features
+    - cargo check --verbose --no-default-features --features ffmpeg
+    - cargo check --verbose --no-default-features --features ocr
     - cargo test --verbose
 # check-stable:
 #   <<: *check-base
 #   variables:
 #     RUST_VERSION: stable
-# check-beta:
-#   <<: *check-base
-#   variables:
-#     RUST_VERSION: beta
+check-beta:
+  <<: *check-base
+  variables:
+    RUST_VERSION: beta
 check-nightly:
   <<: *check-base
   variables:

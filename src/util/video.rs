@@ -10,9 +10,6 @@ use tokio::net::process::Command;
 /// The temporary file the frame is written to is returned.
 ///
 /// This operation is expensive.
-// TODO: run ffmpeg command asynchronously through tokio
-// TODO: make sure user has ffmpeg installed
-#[cfg(feature = "ffmpeg")]
 pub async fn extract_frames(path: Arc<TempPath>) -> Result<Arc<TempPath>, ()> {
     let input = path.to_str().expect("failed to get path string");
 

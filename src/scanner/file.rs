@@ -150,6 +150,5 @@ async fn is_illegal_video(_: File, url: &str) -> bool {
     };
 
     // Test whether the image file is illegal
-    println!("Checking extracted video frames...");
     super::image::is_illegal_image(frame_file).await
 }

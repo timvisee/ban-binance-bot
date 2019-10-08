@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use dssim::Dssim;
@@ -20,7 +21,7 @@ pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
 
     // Build a list of checks to pass
     #[allow(unused_mut)]
-    let mut checks = vec![
+    let mut checks: Vec<Pin<Box<dyn Future<Output = bool> + Send>>> = vec![
         // TODO: temporarily disable until memory leak is found
         // matches_illegal_template(path.clone()).boxed(),
     ];
