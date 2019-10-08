@@ -59,7 +59,7 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         _ => {},
     };
 
-    // Download image files based on extension, audit them
+    // Do tests based on file extension
     // TODO: better extension test
     if url.ends_with(".jpg")
         || url.ends_with(".jpeg")
@@ -75,6 +75,17 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         || url.ends_with(".pam")
         || url.ends_with(".webp") {
         if is_illegal_image(file, &url).await {
+            return true;
+        }
+    } else if url.ends_with(".mts")
+        || url.ends_with(".avi")
+        || url.ends_with(".flv")
+        || url.ends_with(".mpeg")
+        || url.ends_with(".mp4")
+        || url.ends_with(".wmv")
+        || url.ends_with(".mov")
+        || url.ends_with(".webm") {
+        if is_illegal_video(file, &url).await {
             return true;
         }
     } else {
@@ -109,4 +120,32 @@ async fn is_illegal_image(file: File, url: &str) -> bool {
 
     // Test whether the image file is illegal
     super::image::is_illegal_image(Arc::new(path)).await
+}
+
+/// Check whether the given Telegram video is an illegal file.
+async fn is_illegal_video(_: File, url: &str) -> bool {
+    // Download the file to a temporary file to test on
+    let path = match util::download::download_temp(&url).await {
+        Ok(response) => response.1,
+        Err(err) => {
+            println!(
+                "Failed to download Telegram file to test for illegal content, ignoring: {:?}",
+                err
+            );
+            return false;
+        }
+    };
+
+    // Extract video frames
+    let frame_file = match util::video::extract_frames(Arc::new(path)).await {
+        Ok(frame_file) => frame_file,
+        Err(_) => {
+            println!("Failed to extract video frames to check, ignoring");
+            return false;
+        },
+    };
+
+    // Test whether the image file is illegal
+    println!("Checking extracted video frames...");
+    super::image::is_illegal_image(frame_file).await
 }
