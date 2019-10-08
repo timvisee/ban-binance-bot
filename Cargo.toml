@@ -15,7 +15,7 @@ gitlab = { repository = "timvisee/ban-binance-bot", branch = "master" }
 
 [features]
 default = ["ffmpeg", "ocr"]
-ffmpeg = []
+ffmpeg = ["tokio/process"]
 ocr = ["leptess"]
 
 [dependencies]
@@ -32,8 +32,6 @@ rgb = "0.8"
 tempfile = "3.1"
 tokio = "0.2.0-alpha.6"
 tokio-executor = "0.2.0-alpha.6"
-tokio-fs = "0.2.0-alpha.6"
-tokio-io = "0.2.0-alpha.6"
 took = "0.1"
 url = "2.1"
 
