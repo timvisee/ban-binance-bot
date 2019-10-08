@@ -19,7 +19,7 @@ variables:
 # Install the proper Rust compiler version
 before_script:
   - apt-get update
-  - apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev default-libmysqlclient-dev libleptonica-dev libtesseract-dev tesseract-ocr-eng
+  - apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev default-libmysqlclient-dev libleptonica-dev libtesseract-dev tesseract-ocr-eng clang
   - |
     rustup install $RUST_VERSION
     rustup default $RUST_VERSION
