@@ -61,13 +61,24 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
 
     // Download image files based on extension, audit them
     // TODO: better extension test
-    if (url.ends_with(".jpg")
+    if url.ends_with(".jpg")
         || url.ends_with(".jpeg")
         || url.ends_with(".png")
-        || url.ends_with(".webp"))
-        && is_illegal_image(file, &url).await
-    {
-        return true;
+        || url.ends_with(".gif")
+        || url.ends_with(".tiff")
+        || url.ends_with(".bmp")
+        || url.ends_with(".ico")
+        || url.ends_with(".pnm")
+        || url.ends_with(".pbm")
+        || url.ends_with(".pgm")
+        || url.ends_with(".ppm")
+        || url.ends_with(".pam")
+        || url.ends_with(".webp") {
+        if is_illegal_image(file, &url).await {
+            return true;
+        }
+    } else {
+        println!("Unhandled file URL: {}", url);
     }
 
     false
