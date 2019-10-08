@@ -79,8 +79,8 @@ dependencies = [
  "imgref 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "leptess 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "linkify 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.0-alpha.0 (git+https://github.com/seanmonstar/reqwest?rev=5b55aee)",
  "rgb 0.8.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "telegram-bot 0.6.3 (git+https://github.com/telegram-rs/telegram-bot?rev=ee6c3f6)",
@@ -780,14 +780,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "linkify"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2211,7 +2203,6 @@ dependencies = [
 "checksum leptonica-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "74a0ba73b1aeb5dd7adbda4aa6e1edbce40bfb584c87829b7f7ea0652951ab22"
 "checksum libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)" = "34fcd2c08d2f832f376f4173a231990fa5aef4e99fb569867318a227ef4c06ba"
 "checksum libloading 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f2b111a074963af1d37a139918ac6d49ad1d0d5e47f72fd55388619691a7d753"
-"checksum linkify 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "03951527dd24d2c59f407502e7d88e0948ef06fac23335b556a4c2bc03c22096"
 "checksum lock_api 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f8912e782533a93a167888781b836336a6ca5da6175c05944c86cf28c31104dc"
 "checksum lodepng 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "40ed9859b15e009b494528f32ad054c5baf67afabf3c05d27973ea151563d430"
 "checksum log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"

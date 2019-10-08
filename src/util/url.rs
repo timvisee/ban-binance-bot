@@ -1,18 +1,27 @@
 use std::time::Duration;
 
-use linkify::{LinkFinder, LinkKind};
+use regex::Regex;
 use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
 use url::Url;
 
+lazy_static! {
+    // A regex for detecting URLs.
+    static ref URL_REGEX: Regex = Regex::new(r"(?:(?:https?|ftp)://)?(?:\S+(?::\S*)?@|\d{1,3}(?:\.\d{1,3}){3}|(?:(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)(?:\.(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)*(?:\.[a-z\x{00a1}-\x{ffff}]{2,6}))(?::\d+)?(?:[^\s]*)?")
+        .expect("failed to compile URL regex");
+}
+
 /// List all URLs in the given text.
 pub fn find_urls(text: &str) -> Vec<Url> {
-    // Set up the URL finder
-    let mut finder = LinkFinder::new();
-    finder.kinds(&[LinkKind::Url]);
-
     // Collect all links, parse them to URL
-    finder
-        .links(text)
+    URL_REGEX.find_iter(text)
+        .map(|url| {
+            // Prefix protocol if not set
+            let mut url = url.as_str().trim().to_owned();
+            if !url.starts_with("http") && !url.starts_with("ftp") {
+                url.insert_str(0, "https://");
+            }
+            url
+        })
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
