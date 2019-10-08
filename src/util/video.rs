@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 use tempfile::{Builder, TempPath};
@@ -11,6 +11,7 @@ use tempfile::{Builder, TempPath};
 /// This operation is expensive.
 // TODO: run ffmpeg command asynchronously through tokio
 // TODO: make sure user has ffmpeg installed
+#[cfg(feature = "ffmpeg")]
 pub async fn extract_frames(path: Arc<TempPath>) -> Result<Arc<TempPath>, ()> {
     tokio_executor::blocking::run(move || {
         let input = path.to_str().expect("failed to get path string");
@@ -36,6 +37,8 @@ pub async fn extract_frames(path: Arc<TempPath>) -> Result<Arc<TempPath>, ()> {
             .arg("3")
             .arg("-y")
             .arg(output)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status();
 
         // Make sure the command succeeded

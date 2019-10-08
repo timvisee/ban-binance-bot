@@ -85,8 +85,11 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         || url.ends_with(".wmv")
         || url.ends_with(".mov")
         || url.ends_with(".webm") {
-        if is_illegal_video(file, &url).await {
-            return true;
+        #[cfg(feature = "ffmpeg")]
+        {
+            if is_illegal_video(file, &url).await {
+                return true;
+            }
         }
     } else {
         println!("Unhandled file URL: {}", url);
@@ -123,6 +126,7 @@ async fn is_illegal_image(file: File, url: &str) -> bool {
 }
 
 /// Check whether the given Telegram video is an illegal file.
+#[cfg(feature = "ffmpeg")]
 async fn is_illegal_video(_: File, url: &str) -> bool {
     // Download the file to a temporary file to test on
     let path = match util::download::download_temp(&url).await {

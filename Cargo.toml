@@ -14,7 +14,8 @@ license = "GPL-3.0"
 gitlab = { repository = "timvisee/ban-binance-bot", branch = "master" }
 
 [features]
-default = ["ocr"]
+default = ["ffmpeg", "ocr"]
+ffmpeg = []
 ocr = ["leptess"]
 
 [dependencies]

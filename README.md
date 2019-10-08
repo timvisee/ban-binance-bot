@@ -67,6 +67,9 @@ Build requirements:
 Runtime requirements:
 - A Telegram bot token
 - Feature specific:
+  - `ffmpeg`: (default, scan videos)
+    - `ffmpeg`:
+      - Ubuntu: `sudo apt-get install ffmpeg`
   - `ocr`: (default, scan images for illegal text)
     - `tesseract` data for English language:
       - Ubuntu: `sudo apt-get install tesseract-ocr-eng`
@@ -79,8 +82,8 @@ cd ban-binance-bot
 # Use Rust nightly in current directory
 rustup override set nightly
 
-# Install OCR libraries
-sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng clang
+# Install build and runtime dependencies
+sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng clang ffmpeg
 
 # Build release
 cargo build --release
@@ -93,7 +96,7 @@ nano .env
 ./target/release/ban-binance-bot
 ```
 
-To build the bot without OCR features, so you don't have to install extra
+To build the bot without some features, so you don't have to install extra
 packages, use:
 
 ```bash
