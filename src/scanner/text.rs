@@ -64,8 +64,9 @@ fn contains_smart(text: &str, contains: &str) -> bool {
     }
 
     // At least 10% must be ASCII to be valid
-    let min_ascii = 1 + text.len() / 10;
-    text.chars().filter(char::is_ascii).count() >= min_ascii
+    let text_len = text.chars().filter(|c| !c.is_whitespace()).count();
+    let min_ascii = 1 + text_len / 10;
+    text.chars().filter(|c| c.is_ascii() && !c.is_whitespace()).count() >= min_ascii
 }
 
 /// Smart check whehter a char matches.
