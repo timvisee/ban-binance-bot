@@ -11,6 +11,7 @@ pub async fn select_true<I>(iter: I) -> bool
           I::Item: Future<Output = bool> + Send,
 {
     // Collect the list, ensure there's at least one future to complete
+    // TODO: do not create list here
     let list: Vec<_> = iter.into_iter().collect();
     if list.is_empty() {
         return false;

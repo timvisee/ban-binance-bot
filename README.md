@@ -80,7 +80,7 @@ cd ban-binance-bot
 rustup override set nightly
 
 # Install OCR libraries
-sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng
+sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng clang
 
 # Build release
 cargo build --release

@@ -1,5 +1,7 @@
+use std::env;
+
 use futures::prelude::*;
-use telegram_bot::{prelude::*, types::{Message, Update, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
+use telegram_bot::{prelude::*, types::{ChatId, Message, Update, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
 use took::Timer;
 
 use crate::{
@@ -125,7 +127,26 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         .telegram_client()
         .send(msg.from.kick_from(&chat))
         .await;
-    let _ = state.telegram_client().send(msg.delete()).await;
+
+    // Forward the message to the global spam log chat
+    let forward_chat_id = env::var("GLOBAL_SPAM_LOG_CHAT_ID").ok().and_then(|id| id.parse().ok());
+    if let Some(id) = forward_chat_id {
+        // Do not forward if in same chat
+        let id = ChatId::new(id);
+        if msg.chat.id() == id {
+            println!("Not forwarding spam to global log chat, is same chat");
+        } else {
+            // Forward
+            if let Err(err) = state.telegram_client().send(msg.forward(id)).await {
+                println!("Failed to forward spam message to global log chat, ignoring: {:?}", err);
+            }
+        }
+    }
+
+    // Delete the user message
+    if let Err(err) = state.telegram_client().send(msg.delete()).await {
+        println!("Failed to delete spam message, might not have enough permission, ignoring: {}", err);
+    }
 
     // Build the notification to share in the chat
     let notification = if kick_user.is_err() {
