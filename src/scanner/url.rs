@@ -18,6 +18,15 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
         return false;
     }
 
+    any_illegal_url(urls).await
+}
+
+/// Check whether the given list of URLs contains any illegal URL.
+///
+/// This uses `ILLEGAL_HOSTS`.
+pub async fn any_illegal_url<I>(urls: I) -> bool
+    where I: IntoIterator<Item = Url>,
+{
     // Test each URL concurrently
     select_true(urls.into_iter().map(is_illegal_url)).await
 }

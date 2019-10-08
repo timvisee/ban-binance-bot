@@ -1,7 +1,7 @@
 use std::env;
 
 use futures::prelude::*;
-use telegram_bot::{prelude::*, types::{ChatId, Message, Update, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
+use telegram_bot::{prelude::*, types::{ChatId, Message, Update, MessageKind, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
 use took::Timer;
 
 use crate::{
@@ -190,6 +190,18 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
 
     // Check message text
     if let Some(text) = msg.text() {
+        // Scan any hidden URLs
+        match &msg.kind {
+            MessageKind::Text { entities, .. } =>  {
+                let urls = util::url::find_hidden_urls(entities);
+                if !urls.is_empty() {
+                    checks.push(scanner::url::any_illegal_url(urls).boxed());
+                }
+            }
+            _ => {},
+        }
+
+        // Scan the regular text
         checks.push(scanner::text::is_illegal_text(text).boxed());
     }
 

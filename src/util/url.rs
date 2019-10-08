@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use regex::Regex;
 use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
+use telegram_bot::types::{MessageEntity, MessageEntityKind};
 use url::Url;
 
 lazy_static! {
@@ -21,6 +22,26 @@ pub fn find_urls(text: &str) -> Vec<Url> {
                 url.insert_str(0, "https://");
             }
             url
+        })
+        .filter_map(|url| match Url::parse(url.as_str()) {
+            Ok(url) => Some(url),
+            Err(err) => {
+                eprintln!("Failed to parse URL: {:?}", err);
+                None
+            }
+        })
+        .collect()
+}
+
+/// Find all URLs in a message that are normally hidden in text.
+///
+/// The `entities` for the Telegram message must be given.
+pub fn find_hidden_urls(entities: &[MessageEntity]) -> Vec<Url> {
+    entities
+        .iter()
+        .filter_map(|entity| match entity.kind {
+            MessageEntityKind::TextLink(ref url) => Some(url),
+            _ => None,
         })
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
