@@ -39,7 +39,7 @@ url = "2.1"
 [dependencies.telegram-bot]
 version = "*"
 git = "https://github.com/telegram-rs/telegram-bot"
-rev = "ee6c3f6"
+rev = "fb8ed37"
 
 [dependencies.reqwest]
 version = "0.10.0-alpha.0"
