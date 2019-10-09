@@ -1,4 +1,4 @@
-use telegram_bot::User;
+use telegram_bot::{User, MessageChat};
 
 /// Format the name of a given Telegram user.
 ///
@@ -49,4 +49,54 @@ pub fn format_user_name_log(user: &User) -> String {
     }
 
     name
+}
+
+/// Format the name of a given Telegram chat.
+///
+/// The output consists of:
+/// - Group name
+/// - Clickable name (if handle is known)
+/// - Group ID (if handle is not know)
+///
+/// The returned string should be sent with `.parse_mode(ParseMode::Markdown)` enabled.
+pub fn format_chat_name(chat: &MessageChat) -> String {
+    match chat {
+        MessageChat::Private(user) => {
+            format!("{} (direct message)", format_user_name(user))
+        },
+        MessageChat::Group(group) => {
+            format!("'_{}_' (`{}`)", group.title, group.id)
+        },
+        MessageChat::Supergroup(group) => {
+            match &group.username {
+                Some(handle) => format!("[{}](https://t.me/{})", group.title, handle),
+                None => format!("'_{}_' (`{}`)", group.title, group.id),
+            }
+        },
+        MessageChat::Unknown(_) => "?".into(),
+    }
+}
+
+/// Format the name of a given Telegram chat for logging.
+///
+/// The output consists of:
+/// - Group name
+/// - Group handle (if handle is known)
+/// - Group ID (if handle is not know)
+pub fn format_chat_name_log(chat: &MessageChat) -> String {
+    match chat {
+        MessageChat::Private(user) => {
+            format!("{} (direct message)", format_user_name_log(user))
+        },
+        MessageChat::Group(group) => {
+            format!("'{}' ({})", group.title, group.id)
+        },
+        MessageChat::Supergroup(group) => {
+            match &group.username {
+                Some(handle) => format!("@{} ({})", handle, group.title),
+                None => format!("'{}' ({})", group.title, group.id),
+            }
+        },
+        MessageChat::Unknown(_) => "?".into(),
+    }
 }

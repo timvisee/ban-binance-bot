@@ -116,9 +116,18 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
 /// This checks if the message is illegal, and immediately bans the sender if it is.
 async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Return if not illegal, ban user otherwise
+    let timer = Timer::new();
     if !is_illegal_message(msg.clone(), state.clone()).await {
         return Ok(());
     }
+    let took = timer.took();
+
+    println!(
+        "Banning {} in {} for spam, audit took {}",
+        util::telegram::format_user_name_log(&msg.from),
+        util::telegram::format_chat_name_log(&msg.chat),
+        took,
+    );
 
     // Build the message, keep a reference to the chat
     let name = util::telegram::format_user_name(&msg.from);
@@ -131,6 +140,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         .await;
 
     // Forward the message to the global spam log chat
+    let mut forward_msg = None;
     let forward_chat_id = env::var("GLOBAL_SPAM_LOG_CHAT_ID").ok().and_then(|id| id.parse().ok());
     if let Some(id) = forward_chat_id {
         // Do not forward if in same chat
@@ -139,8 +149,9 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
             println!("Not forwarding spam to global log chat, is same chat");
         } else {
             // Forward
-            if let Err(err) = state.telegram_client().send(msg.forward(id)).await {
-                println!("Failed to forward spam message to global log chat, ignoring: {:?}", err);
+            match state.telegram_client().send(msg.forward(id)).await {
+                Ok(msg) => forward_msg = Some(msg),
+                Err(err) => println!("Failed to forward spam message to global log chat, ignoring: {:?}", err),
             }
         }
     }
@@ -153,8 +164,8 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Build the notification to share in the chat
     let mut notification = if kick_user.is_err() {
         format!(
-            "An administrator should ban {} for posting spam/phishing. I already deleted the message.\n\n\
-            [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
+            "An admin should ban {} for posting spam/phishing. I've deleted the message.\n\n\
+            [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator to automatically ban users posting new promotions. \
             Administrators are never banned.",
             name,
         )
@@ -188,6 +199,32 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         ))
         .await;
 
+    // Annotate forwarded spam message
+    if let Some(forward_msg) = forward_msg {
+        let state = state.clone();
+        let mut annotate = forward_msg.text_reply(
+            format!(
+                "Banned this message in {} from {}.\n\n_Audit took {}._",
+                util::telegram::format_chat_name(&msg.chat),
+                util::telegram::format_user_name(&msg.from),
+                took,
+            )
+        );
+
+        tokio::spawn(async move {
+            // Wait, prevent throttling, then annotate the forwarded spam
+            delay_for(Duration::from_secs(2)).await;
+            state.telegram_client().send(annotate
+                    .parse_mode(ParseMode::Markdown)
+                    .disable_preview()
+                    .disable_notification()
+                )
+                .inspect_err(|err| println!("Failed to annotate forwarded spam message, ignoring...\n{:?}", err))
+                .map(|_| ())
+                .await
+        });
+    }
+
     // Self-destruct messages
     if self_destruct {
         if let Ok(msg) = notify_msg {
@@ -195,12 +232,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                 // Wait, then self destruct the message
                 delay_for(Duration::from_secs(NOTIFY_SELF_DESTRUCT_TIME.unwrap())).await;
                 state.telegram_client().send(msg.delete())
-                    .inspect_err(|err| {
-                        println!(
-                            "Failed to self destruct ban notification, ignoring...\n{:?}",
-                            err
-                        );
-                    })
+                    .inspect_err(|err| println!("Failed to self destruct ban notification, ignoring...\n{:?}", err))
                     .map(|_| ())
                     .await
             });
