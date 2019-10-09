@@ -1,26 +1,28 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 14] = [
-    "binance.jerseymx.site",
-    "binance.dexexchange.icu",
-    "binance.eventonline.icu",
-    "event.exchangelaunch.services",
-    "exchange.bnblaunch.top",
+pub const ILLEGAL_HOSTS: [&str; 16] = [
     "binance.bnbnetwork.icu",
-    "binance.webjersey.icu",
+    "binance.dexexchange.icu",
+    "binance.dexsupport.site",
+    "binance.eventonline.icu",
+    "binance.jerseymx.site",
     "binance.jerseyonline.icu",
+    "binance.mxevent.site",
+    "binance.us",
+    "binance.webjersey.icu",
+    "event.exchangelaunch.services",
+    "exchange.bnblaunch.com",
+    "exchange.bnblaunch.top",
+    "exchange.bnbsolutions.services",
     "exchange.jerseysolution.services",
     "exchange.marketrelease.services",
-    "binance.dexsupport.site",
-    "binance.mxevent.site",
     "mxevent.site",
-    "binance.us",
 ];
 
 /// A list of illegal URL host parts.
 pub const ILLEGAL_HOST_PARTS: [&str; 6] = [
+    "binance.dex",
     "binance.event",
     "binance.exchange",
-    "binance.dexchange",
     "binance.jersey",
     "jerseyonline",
     "jerseysolution",
