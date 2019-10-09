@@ -35,6 +35,8 @@ tokio-executor = "0.2.0-alpha.6"
 took = "0.1"
 url = "2.1"
 
+hyper = { version = "0.13.0-alpha.4", default-features = false, features = ["tcp"] }
+
 [dependencies.telegram-bot]
 version = "*"
 git = "https://github.com/telegram-rs/telegram-bot"

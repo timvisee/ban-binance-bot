@@ -23,6 +23,14 @@ pub fn find_urls(text: &str) -> Vec<Url> {
             }
             url
         })
+        // TODO: remove this filter once proper URL checking is implemented in reqwest
+        .filter(|url| match url.parse::<hyper::Uri>() {
+            Ok(_) => true,
+            Err(err) => {
+                println!("Failed to parse URL as URI: {:?}", err);
+                false
+            }
+        })
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
