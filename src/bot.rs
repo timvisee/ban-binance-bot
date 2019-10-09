@@ -157,17 +157,23 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     }
 
     // Delete the user message
-    if let Err(err) = state.telegram_client().send(msg.delete()).await {
+    let delete = state.telegram_client().send(msg.delete()).await;
+    if let Err(err) = &delete {
         println!("Failed to delete spam message, might not have enough permission, ignoring: {}", err);
     }
 
     // Build the notification to share in the chat
     let mut notification = if kick_user.is_err() {
         format!(
-            "An admin should ban {} for posting spam/phishing. I've deleted the message.\n\n\
+            "An admin should ban {} for posting spam/phishing.{}\n\n\
             [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator to automatically ban users posting new promotions. \
             Administrators are never banned.",
             name,
+            if delete.is_ok() {
+                " I've deleted the message."
+            } else {
+                ""
+            }
         )
     } else {
         format!(
