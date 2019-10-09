@@ -34,7 +34,7 @@ pub fn find_urls(text: &str) -> Vec<Url> {
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
-                eprintln!("Failed to parse URL: {:?}", err);
+                println!("Failed to parse URL: {:?}", err);
                 None
             }
         })
@@ -54,7 +54,7 @@ pub fn find_hidden_urls(entities: &[MessageEntity]) -> Vec<Url> {
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
-                eprintln!("Failed to parse URL: {:?}", err);
+                println!("Failed to parse URL: {:?}", err);
                 None
             }
         })

@@ -151,14 +151,14 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Build the notification to share in the chat
     let notification = if kick_user.is_err() {
         format!(
-            "An administrator should ban {} for posting Binance promotions.\n\n\
+            "An administrator should ban {} for posting spam/phishing.\n\n\
             [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
             Administrators are never banned automatically.",
             name,
         )
     } else {
         format!(
-            "Automatically banned {} for posting Binance promotions.",
+            "Automatically banned {} for posting spam/phishing.",
             name,
         )
     };
@@ -173,7 +173,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                 .disable_notification(),
         )
         .map_err(|err| {
-            eprintln!(
+            println!(
                 "Failed to send ban notification in chat, ignoring...\n{:?}",
                 err
             );

@@ -111,6 +111,9 @@ and scanned for illegal content. All content is immediately deleted from the
 servers disk the bot is running on after scanning. This is an automated process
 with no user intervention.
 
+Depending on runtime configuration for the bot, messages detected as spam may
+be forwarded to a logging chat, to collect and monitor all spam.
+
 ## License
 This project is licensed under the GNU GPL-3.0 license.
 Check out the [LICENSE](LICENSE) file for more information.

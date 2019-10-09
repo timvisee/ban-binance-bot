@@ -23,8 +23,8 @@ async fn main() -> Result<(), UpdateError> {
     // Build the application, attach signal handling
     let app = bot::build_telegram_handler(state.clone()).await;
     match &app {
-        Ok(_) => eprintln!("Bot quit successfully"),
-        Err(err) => eprintln!("Bot quit with error!\n{:?}", err),
+        Ok(_) => println!("Bot quit successfully"),
+        Err(err) => println!("Bot quit with error!\n{:?}", err),
     }
 
     app

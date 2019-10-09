@@ -118,7 +118,7 @@ fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
     let image = match image::open(path.as_ref()) {
         Ok(image) => image,
         Err(err) => {
-            eprintln!("failed to open downloaded image, ignoring: {}", err);
+            println!("Failed to open downloaded image, ignoring: {}", err);
             return false;
         }
     };
