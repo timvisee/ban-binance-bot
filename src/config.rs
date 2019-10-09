@@ -87,6 +87,11 @@ pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 /// This is for image matching. Image OCR will run on all images if enabled.
 pub const IMAGE_MIN_SIZE: u32 = 80;
 
+/// Time after which to self-destruct ban notification messages by this bot.
+///
+/// Set to `None` to not self-destruct.
+pub const NOTIFY_SELF_DESTRUCT_TIME: Option<u64> = Some(30);
+
 lazy_static! {
     /// Number of Telegram API updates to process concurrently.
     pub static ref TELEGRAM_CONCURRENT_UPDATES: usize = num_cpus::get().max(2);

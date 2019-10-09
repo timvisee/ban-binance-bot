@@ -1,7 +1,9 @@
 use std::env;
+use std::time::Duration;
 
 use futures::prelude::*;
 use telegram_bot::{prelude::*, types::{ChatId, Message, Update, MessageKind, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
+use tokio::timer::delay_for;
 use took::Timer;
 
 use crate::{
@@ -149,11 +151,11 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     }
 
     // Build the notification to share in the chat
-    let notification = if kick_user.is_err() {
+    let mut notification = if kick_user.is_err() {
         format!(
-            "An administrator should ban {} for posting spam/phishing.\n\n\
+            "An administrator should ban {} for posting spam/phishing. I already deleted the message.\n\n\
             [Add](https://github.com/timvisee/ban-binance-bot/blob/master/README.md#how-to-use) this bot as explicit administrator in this group to automatically ban users posting new promotions. \
-            Administrators are never banned automatically.",
+            Administrators are never banned.",
             name,
         )
     } else {
@@ -163,23 +165,47 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         )
     };
 
+    // Add self-destruct notice
+    let self_destruct = NOTIFY_SELF_DESTRUCT_TIME.is_some();
+    if self_destruct {
+        notification += &format!("\n\n_This message will self-destruct in {} seconds..._", NOTIFY_SELF_DESTRUCT_TIME.unwrap());
+    }
+
     // Attempt to send a ban notification to the chat
-    let _ = state
+    let notify_msg = state
         .telegram_client()
         .send(
+            // TODO: only show self destruct if actually self destructing
+            // TODO: make time configurable
             chat.text(notification)
                 .parse_mode(ParseMode::Markdown)
                 .disable_preview()
                 .disable_notification(),
         )
-        .map_err(|err| {
-            println!(
-                "Failed to send ban notification in chat, ignoring...\n{:?}",
-                err
-            );
-            ()
-        })
+        .inspect_err(|err| println!(
+            "Failed to send ban notification in chat, ignoring...\n{:?}",
+            err
+        ))
         .await;
+
+    // Self-destruct messages
+    if self_destruct {
+        if let Ok(msg) = notify_msg {
+            tokio::spawn(async move {
+                // Wait, then self destruct the message
+                delay_for(Duration::from_secs(NOTIFY_SELF_DESTRUCT_TIME.unwrap())).await;
+                state.telegram_client().send(msg.delete())
+                    .inspect_err(|err| {
+                        println!(
+                            "Failed to self destruct ban notification, ignoring...\n{:?}",
+                            err
+                        );
+                    })
+                    .map(|_| ())
+                    .await
+            });
+        }
+    }
 
     Ok(())
 }
