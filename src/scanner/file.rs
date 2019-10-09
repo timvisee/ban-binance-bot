@@ -61,30 +61,31 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
 
     // Do tests based on file extension
     // TODO: better extension test
-    if url.ends_with(".jpg")
-        || url.ends_with(".jpeg")
-        || url.ends_with(".png")
-        || url.ends_with(".gif")
-        || url.ends_with(".tiff")
-        || url.ends_with(".bmp")
-        || url.ends_with(".ico")
-        || url.ends_with(".pnm")
-        || url.ends_with(".pbm")
-        || url.ends_with(".pgm")
-        || url.ends_with(".ppm")
-        || url.ends_with(".pam")
-        || url.ends_with(".webp") {
+    let url_lower = url.trim_end().to_lowercase();
+    if url_lower.ends_with(".jpg")
+        || url_lower.ends_with(".jpeg")
+        || url_lower.ends_with(".png")
+        || url_lower.ends_with(".gif")
+        || url_lower.ends_with(".tiff")
+        || url_lower.ends_with(".bmp")
+        || url_lower.ends_with(".ico")
+        || url_lower.ends_with(".pnm")
+        || url_lower.ends_with(".pbm")
+        || url_lower.ends_with(".pgm")
+        || url_lower.ends_with(".ppm")
+        || url_lower.ends_with(".pam")
+        || url_lower.ends_with(".webp") {
         if is_illegal_image(file, &url).await {
             return true;
         }
-    } else if url.ends_with(".mts")
-        || url.ends_with(".avi")
-        || url.ends_with(".flv")
-        || url.ends_with(".mpeg")
-        || url.ends_with(".mp4")
-        || url.ends_with(".wmv")
-        || url.ends_with(".mov")
-        || url.ends_with(".webm") {
+    } else if url_lower.ends_with(".mts")
+        || url_lower.ends_with(".avi")
+        || url_lower.ends_with(".flv")
+        || url_lower.ends_with(".mpeg")
+        || url_lower.ends_with(".mp4")
+        || url_lower.ends_with(".wmv")
+        || url_lower.ends_with(".mov")
+        || url_lower.ends_with(".webm") {
         #[cfg(feature = "ffmpeg")]
         {
             if is_illegal_video(file, &url).await {
