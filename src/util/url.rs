@@ -31,7 +31,7 @@ pub fn find_urls(text: &str) -> Vec<Url> {
         .filter(|url| match url.parse::<hyper::Uri>() {
             Ok(_) => true,
             Err(err) => {
-                warn!("Failed to parse URL as URI: {}", err);
+                warn!("Failed to parse URL '{}' as URI: {}", url, err);
                 false
             }
         })

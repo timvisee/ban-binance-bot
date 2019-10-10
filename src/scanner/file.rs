@@ -82,6 +82,8 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
                 return true;
             }
         }
+    } else if url_path.ends_with(".tgs") {
+        debug!("No scanner for animated Telegram stickers, assuming safe: {}", url);
     } else {
         warn!("No scanners to audit file type, assuming safe: {}", url);
     }

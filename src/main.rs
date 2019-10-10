@@ -25,7 +25,14 @@ async fn main() -> Result<(), UpdateError> {
     info!("Starting Telegram bot...");
 
     // Initialize the global state
-    let state = State::init();
+    let state = match State::init().await {
+        Ok(state) => state,
+        Err(err) => {
+            error!("Failed to initialize bot state: {}", err);
+            panic!();
+        },
+    };
+    debug!("Bot has been initialized");
 
     // Build the application, attach signal handling
     let app = bot::build_telegram_handler(state.clone()).await;

@@ -123,6 +123,11 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
 ///
 /// This checks if the message is illegal, and immediately bans the sender if it is.
 async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
+    // Log added/removed to group/channel messages
+    if log_added_removed(&msg, &state) {
+        return Ok(());
+    }
+
     // Return if not illegal, ban user otherwise
     let timer = Timer::new();
     if !is_illegal_message(msg.clone(), state.clone()).await {
@@ -251,6 +256,31 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     }
 
     Ok(())
+}
+
+/// Report to log whether this bot is added/removed from groups/channels.
+///
+/// If the given message represents that this bot has been added or removed from a group or channel,
+/// and a message was logged about it, it returns `true`.
+/// Otherwise this returns `false.
+fn log_added_removed(msg: &Message, state: &State) -> bool {
+    match &msg.kind {
+        MessageKind::NewChatMembers { data } => {
+            if data.into_iter().any(|u| state.is_bot_user(u)) {
+                info!("Bot was added to {}", util::telegram::format_chat_name_log(&msg.chat));
+                return true;
+            }
+        },
+        MessageKind::LeftChatMember { data } => {
+            if state.is_bot_user(data) {
+                info!("Bot was removed from {}", util::telegram::format_chat_name_log(&msg.chat));
+                return true;
+            }
+        },
+        _ => {},
+    }
+
+    false
 }
 
 /// Check whether the given message is illegal.

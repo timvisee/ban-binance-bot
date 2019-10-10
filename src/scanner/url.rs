@@ -145,6 +145,6 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
         return true;
     }
 
-    debug!("Audited URL as legal: {}", url);
+    debug!("Audited URL as safe: {}", url);
     false
 }
