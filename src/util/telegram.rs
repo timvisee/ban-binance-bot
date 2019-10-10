@@ -62,15 +62,15 @@ pub fn format_user_name_log(user: &User) -> String {
 pub fn format_chat_name(chat: &MessageChat) -> String {
     match chat {
         MessageChat::Private(user) => {
-            format!("{} (direct message)", format_user_name(user))
+            format!("{} (direct)", format_user_name(user))
         },
         MessageChat::Group(group) => {
-            format!("'_{}_' (`{}`)", group.title, group.id)
+            format!("'_{}_'", group.title)
         },
         MessageChat::Supergroup(group) => {
             match &group.username {
                 Some(handle) => format!("[{}](https://t.me/{})", group.title, handle),
-                None => format!("'_{}_' (`{}`)", group.title, group.id),
+                None => format!("'_{}_'", group.title),
             }
         },
         MessageChat::Unknown(_) => "?".into(),
@@ -86,15 +86,15 @@ pub fn format_chat_name(chat: &MessageChat) -> String {
 pub fn format_chat_name_log(chat: &MessageChat) -> String {
     match chat {
         MessageChat::Private(user) => {
-            format!("{} (direct message)", format_user_name_log(user))
+            format!("{} (direct)", format_user_name_log(user))
         },
         MessageChat::Group(group) => {
-            format!("'{}' ({})", group.title, group.id)
+            format!("'{}'", group.title)
         },
         MessageChat::Supergroup(group) => {
             match &group.username {
                 Some(handle) => format!("@{} ({})", handle, group.title),
-                None => format!("'{}' ({})", group.title, group.id),
+                None => format!("'{}'", group.title),
             }
         },
         MessageChat::Unknown(_) => "?".into(),
