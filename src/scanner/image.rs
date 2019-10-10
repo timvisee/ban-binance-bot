@@ -23,7 +23,6 @@ pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
 
     // Compare images against database of banned images
     if AUDIT_IMAGE_COMPARE {
-        // TODO: this seems to leak memory when used a lot, investigate and fix
         checks.push(matches_illegal_template(path.clone()).boxed());
     }
 

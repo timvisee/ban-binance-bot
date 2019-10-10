@@ -17,13 +17,16 @@ pub fn find_urls(text: &str) -> Vec<Url> {
     URL_REGEX.find_iter(text)
         .map(|url| {
             // Prefix protocol if not set
-            let mut url = url.as_str().trim().to_owned();
+            // TODO: do not trim suffixed ), remove when this issue is resolved
+            // Issue: https://github.com/robinst/linkify/issues/7
+            let mut url = url.as_str().trim().trim_end_matches(')').to_owned();
             if !url.starts_with("http") && !url.starts_with("ftp") {
                 url.insert_str(0, "https://");
             }
             url
         })
         // TODO: remove this filter once proper URL checking is implemented in reqwest
+        // Issue: https://github.com/seanmonstar/reqwest/issues/668
         .filter(|url| match url.parse::<hyper::Uri>() {
             Ok(_) => true,
             Err(err) => {
