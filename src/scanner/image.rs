@@ -19,12 +19,13 @@ use crate::scanner;
 pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
     println!("Checking image {:?}...", path);
 
-    // Build a list of checks to pass
-    #[allow(unused_mut)]
-    let mut checks: Vec<Pin<Box<dyn Future<Output = bool> + Send>>> = vec![
-        // TODO: temporarily disable until memory leak is found
-        // matches_illegal_template(path.clone()).boxed(),
-    ];
+    let mut checks: Vec<Pin<Box<dyn Future<Output = bool> + Send>>> = vec![];
+
+    // Compare images against database of banned images
+    if AUDIT_IMAGE_COMPARE {
+        // TODO: this seems to leak memory when used a lot, investigate and fix
+        checks.push(matches_illegal_template(path.clone()).boxed());
+    }
 
     // Check for illegal text in images
     #[cfg(feature = "ocr")]

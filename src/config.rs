@@ -89,6 +89,11 @@ pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 /// This is for image matching. Image OCR will run on all images if enabled.
 pub const IMAGE_MIN_SIZE: u32 = 80;
 
+/// When auditing, compare images against banned database.
+///
+/// This is expensive when lots of images are listed as banned.
+pub const AUDIT_IMAGE_COMPARE: bool = false;
+
 /// Time after which to self-destruct ban notification messages by this bot.
 ///
 /// Set to `None` to not self-destruct.
