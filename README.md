@@ -103,6 +103,19 @@ packages, use:
 cargo build --release --no-default-features
 ```
 
+The bot currently panics (crashes) for hard errors, such as connection errors to
+the Telegram API. Properly handling these situations in code will be worked on
+in the future. I therefore recommend running this bot with `supervisor` or in a
+simple loop:
+
+```bash
+while true; do
+  echo Starting bot...
+  ./target/release/ban-binance-bot
+  sleep 5
+done
+```
+
 ## Privacy notice
 Once added to a group, this bot scans all following user messages to determine
 whether illegal content is posted. All links are visited to determine whether
