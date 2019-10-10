@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
 
 use dotenv::dotenv;
 use state::State;
@@ -17,14 +19,19 @@ async fn main() -> Result<(), UpdateError> {
     // Load the environment variables file
     dotenv().ok();
 
+    // Enable logging
+    env_logger::init();
+
+    info!("Starting Telegram bot...");
+
     // Initialize the global state
     let state = State::init();
 
     // Build the application, attach signal handling
     let app = bot::build_telegram_handler(state.clone()).await;
     match &app {
-        Ok(_) => println!("Bot quit successfully"),
-        Err(err) => println!("Bot quit with error!\n{:?}", err),
+        Ok(_) => info!("Quit successfully"),
+        Err(err) => error!("Quit with error!\n{:?}", err),
     }
 
     app

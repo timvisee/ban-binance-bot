@@ -27,7 +27,7 @@ pub async fn read_text(path: Arc<TempPath>) -> Result<String, ()> {
         let path = match path.to_str() {
             Some(path) => path,
             None => {
-                println!("failed to obtain image path as text for OCR check, ignoring...");
+                error!("Failed to parse image path for OCR check");
                 return Err(());
             }
         };
@@ -38,7 +38,7 @@ pub async fn read_text(path: Arc<TempPath>) -> Result<String, ()> {
 
         // Read text from image
         lt.get_utf8_text().map_err(|err| {
-            println!("failed to OCR: {}", err);
+            error!("Failed to OCR image: {}", err);
             ()
         })
     }).await

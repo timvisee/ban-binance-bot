@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use futures::prelude::*;
 use telegram_bot::types::{GetFile, File};
+use url::Url;
 
 use crate::{
     config::*,
@@ -26,34 +27,19 @@ pub async fn has_illegal_files(files: Vec<GetFile>, state: State) -> bool {
 ///
 /// A `GetFile` request is given, as the actual file should still be downloaded.
 pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
-    // Request the file from Telegram
-    let file = match state
-        .telegram_client()
-        .send_timeout(file, Duration::from_secs(30))
-        // TODO: do not drop error here
-        .map_err(|err| {
-            dbg!(err);
-            ()
-        })
-        .await
-    {
-        Ok(file) => file,
-        Err(err) => {
-            println!(
-                "failed to request file URL from Telegram, ignoring: {:?}",
-                err
-            );
+    // Request download URL for Telegram file
+    let (file, url) = match request_telegram_file_url(file, state).await {
+        Ok(data) => data,
+        Err(_) => {
+            warn!("Failed to get Telegram API file URL, could not audit, assuming safe");
             return false;
-        }
+        },
     };
-
-    // Request the file URL
-    let url = file.get_url(state.token()).expect("failed to get file URL");
 
     // Skip files that are too large
     match file.file_size {
         Some(size) if size > MAX_FILE_SIZE => {
-            println!("File to large to audit, ignoring");
+            info!("File to large to audit, assuming safe");
             return false;
         },
         _ => {},
@@ -61,31 +47,35 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
 
     // Do tests based on file extension
     // TODO: better extension test
-    let url_lower = url.trim_end().to_lowercase();
-    if url_lower.ends_with(".jpg")
-        || url_lower.ends_with(".jpeg")
-        || url_lower.ends_with(".png")
-        || url_lower.ends_with(".gif")
-        || url_lower.ends_with(".tiff")
-        || url_lower.ends_with(".bmp")
-        || url_lower.ends_with(".ico")
-        || url_lower.ends_with(".pnm")
-        || url_lower.ends_with(".pbm")
-        || url_lower.ends_with(".pgm")
-        || url_lower.ends_with(".ppm")
-        || url_lower.ends_with(".pam")
-        || url_lower.ends_with(".webp") {
+    let url_path = url
+        .path_segments()
+        .and_then(|s| s.last())
+        .map(|s| s.to_lowercase())
+        .unwrap_or_else(|| "".into());
+    if url_path.ends_with(".jpg")
+        || url_path.ends_with(".jpeg")
+        || url_path.ends_with(".png")
+        || url_path.ends_with(".gif")
+        || url_path.ends_with(".tiff")
+        || url_path.ends_with(".bmp")
+        || url_path.ends_with(".ico")
+        || url_path.ends_with(".pnm")
+        || url_path.ends_with(".pbm")
+        || url_path.ends_with(".pgm")
+        || url_path.ends_with(".ppm")
+        || url_path.ends_with(".pam")
+        || url_path.ends_with(".webp") {
         if is_illegal_image(file, &url).await {
             return true;
         }
-    } else if url_lower.ends_with(".mts")
-        || url_lower.ends_with(".avi")
-        || url_lower.ends_with(".flv")
-        || url_lower.ends_with(".mpeg")
-        || url_lower.ends_with(".mp4")
-        || url_lower.ends_with(".wmv")
-        || url_lower.ends_with(".mov")
-        || url_lower.ends_with(".webm") {
+    } else if url_path.ends_with(".mts")
+        || url_path.ends_with(".avi")
+        || url_path.ends_with(".flv")
+        || url_path.ends_with(".mpeg")
+        || url_path.ends_with(".mp4")
+        || url_path.ends_with(".wmv")
+        || url_path.ends_with(".mov")
+        || url_path.ends_with(".webm") {
         #[cfg(feature = "ffmpeg")]
         {
             if is_illegal_video(file, &url).await {
@@ -93,31 +83,64 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
             }
         }
     } else {
-        println!("Unhandled file URL: {}", url);
+        warn!("No scanners to audit file type, assuming safe: {}", url);
     }
 
     false
 }
 
+/// Get `File` for Telegram API `GetFile`.
+async fn request_telegram_file(file: GetFile, state: State) -> Result<File, ()> {
+    state
+        .telegram_client()
+        .send_timeout(file, Duration::from_secs(30))
+        .map_err(|err| {
+            error!("Failed to send file data request to Telegram API: {:?}", err);
+            ()
+        })
+        .await
+        .map_err(|err| {
+            error!("Failed to request file data from Telegram API: {:?}", err);
+            ()
+        })
+}
+
+/// Get download URL for Telegram API `GetFile`.
+async fn request_telegram_file_url(file: GetFile, state: State) -> Result<(File, Url), ()> {
+    // Request Telegram file
+    let file = request_telegram_file(file, state.clone()).await?;
+
+    // Build URL
+    file.get_url(state.token())
+        .ok_or_else(|| {
+            error!("No download URL for Telegram API file provided");
+            ()
+        })
+        .and_then(|url| match Url::parse(&url) {
+            Ok(url) => Ok((file, url)),
+            Err(err) => {
+                error!("Failed to parse file URL from Telegram API: {}", err);
+                Err(())
+            }
+        })
+}
+
 /// Check whether the given Telegram image is an illegal file.
-async fn is_illegal_image(file: File, url: &str) -> bool {
+async fn is_illegal_image(file: File, url: &Url) -> bool {
     // Skip images that are too large
     match file.file_size {
         Some(size) if size > IMAGE_MAX_FILE_SIZE => {
-            println!("Image file size too large to audit, ignoring");
+            info!("Image file too large to audit, assuming safe");
             return false;
         },
         _ => {}
     };
 
     // Download the file to a temporary file to test on
-    let path = match util::download::download_temp(&url).await {
+    let path = match util::download::download_temp(url).await {
         Ok(response) => response.1,
         Err(err) => {
-            println!(
-                "Failed to download Telegram file to test for illegal content, ignoring: {:?}",
-                err
-            );
+            warn!("Failed to download image file, could not audit, assuming safe: {:?}", err);
             return false;
         }
     };
@@ -128,15 +151,12 @@ async fn is_illegal_image(file: File, url: &str) -> bool {
 
 /// Check whether the given Telegram video is an illegal file.
 #[cfg(feature = "ffmpeg")]
-async fn is_illegal_video(_: File, url: &str) -> bool {
+async fn is_illegal_video(_: File, url: &Url) -> bool {
     // Download the file to a temporary file to test on
-    let path = match util::download::download_temp(&url).await {
+    let path = match util::download::download_temp(url).await {
         Ok(response) => response.1,
         Err(err) => {
-            println!(
-                "Failed to download Telegram file to test for illegal content, ignoring: {:?}",
-                err
-            );
+            warn!("Failed to download video file, could not audit, assuming safe: {:?}", err);
             return false;
         }
     };
@@ -145,7 +165,7 @@ async fn is_illegal_video(_: File, url: &str) -> bool {
     let frame_file = match util::video::extract_frames(Arc::new(path)).await {
         Ok(frame_file) => frame_file,
         Err(_) => {
-            println!("Failed to extract video frames to check, ignoring");
+            warn!("Failed to extract video frames, could not audit, assuming safe");
             return false;
         },
     };

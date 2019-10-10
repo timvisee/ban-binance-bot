@@ -35,7 +35,7 @@ pub async fn build_telegram_handler(state: State) -> Result<(), UpdateError> {
 
 /// Handle the given Telegram API update.
 async fn handle_update(state: State, update: Result<Update, TelegramError>) -> Result<(), UpdateError> {
-    // Make sure we received a enw update
+    // Make sure we received a new update
     // TODO: do not drop error here
     let update = update.map_err(UpdateError::Telegram)?;
 
@@ -57,8 +57,8 @@ async fn handle_update(state: State, update: Result<Update, TelegramError>) -> R
 /// This simply notifies the user that the bot is active, and doesn't really do anything else.
 async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
     // Log that we're receiving a private message
-    println!(
-        "Received private message from {}: {}",
+    info!(
+        "Direct message from {}: {}",
         util::telegram::format_user_name_log(&msg.from),
         msg.text().unwrap_or_else(|| "?".into())
     );
@@ -94,6 +94,14 @@ async fn handle_private(state: &State, msg: &Message) -> Result<(), ()> {
         format!("_Safe. Your message is considered safe, and is not seen as Binance spam.\nSend me something else to test._")
     };
 
+    if illegal {
+        warn!(
+            "Direct message from {} audits as unsafe (audit took {})",
+            util::telegram::format_user_name_log(&msg.from),
+            took,
+        );
+    }
+
     // Post a generic direct message status
     state
         .telegram_client()
@@ -122,8 +130,8 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     }
     let took = timer.took();
 
-    println!(
-        "Banning {} in {} for spam, audit took {}",
+    info!(
+        "Banning {} in {} for spam (audit took {})",
         util::telegram::format_user_name_log(&msg.from),
         util::telegram::format_chat_name_log(&msg.chat),
         took,
@@ -146,12 +154,12 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         // Do not forward if in same chat
         let id = ChatId::new(id);
         if msg.chat.id() == id {
-            println!("Not forwarding spam to global log chat, is same chat");
+            debug!("Not forwarding spam to logging chat, because already in this chat");
         } else {
             // Forward
             match state.telegram_client().send(msg.forward(id)).await {
                 Ok(msg) => forward_msg = Some(msg),
-                Err(err) => println!("Failed to forward spam message to global log chat, ignoring: {:?}", err),
+                Err(err) => warn!("Failed to forward spam message to logging chat: {:?}", err),
             }
         }
     }
@@ -159,7 +167,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Delete the user message
     let delete = state.telegram_client().send(msg.delete()).await;
     if let Err(err) = &delete {
-        println!("Failed to delete spam message, might not have enough permission, ignoring: {}", err);
+        warn!("Failed to delete spam message, might not have enough permission: {}", err);
     }
 
     // Build the notification to share in the chat
@@ -199,10 +207,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                 .disable_preview()
                 .disable_notification(),
         )
-        .inspect_err(|err| println!(
-            "Failed to send ban notification in chat, ignoring...\n{:?}",
-            err
-        ))
+        .inspect_err(|err| warn!("Failed to post ban notification in chat: {:?}", err))
         .await;
 
     // Annotate forwarded spam message
@@ -210,9 +215,9 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
         let state = state.clone();
         let mut annotate = forward_msg.text_reply(
             format!(
-                "Banned this message in {} from {}.\n\n_Audit took {}._",
-                util::telegram::format_chat_name(&msg.chat),
+                "Banned this message from {} in {}.\n\n_Audit took {}._",
                 util::telegram::format_user_name(&msg.from),
+                util::telegram::format_chat_name(&msg.chat),
                 took,
             )
         );
@@ -225,7 +230,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                     .disable_preview()
                     .disable_notification()
                 )
-                .inspect_err(|err| println!("Failed to annotate forwarded spam message, ignoring...\n{:?}", err))
+                .inspect_err(|err| warn!("Failed to annotate forwarded spam message: {:?}", err))
                 .map(|_| ())
                 .await
         });
@@ -238,7 +243,7 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
                 // Wait, then self destruct the message
                 delay_for(Duration::from_secs(NOTIFY_SELF_DESTRUCT_TIME.unwrap())).await;
                 state.telegram_client().send(msg.delete())
-                    .inspect_err(|err| println!("Failed to self destruct ban notification, ignoring...\n{:?}", err))
+                    .inspect_err(|err| warn!("Failed to self-destruct ban notification: {:?}", err))
                     .map(|_| ())
                     .await
             });

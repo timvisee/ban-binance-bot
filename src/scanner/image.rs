@@ -17,7 +17,7 @@ use crate::scanner;
 
 /// Check whether the given image is illegal.
 pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
-    println!("Checking image {:?}...", path);
+    debug!("Auditing image at '{:?}'...", path);
 
     let mut checks: Vec<Pin<Box<dyn Future<Output = bool> + Send>>> = vec![];
 
@@ -40,7 +40,10 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
     // Read text from image
     let text = match util::image::read_text(path).await {
         Ok(text) => text,
-        Err(_) => return false,
+        Err(_) => {
+            warn!("Failed to read text from image, could not audit, assuming safe");
+            return false;
+        },
     };
 
     // Trim and lowercase
@@ -51,7 +54,7 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
         .iter()
         .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
     if illegal {
-        println!("Found illegal text in image!");
+        info!("Found illegal text in image");
         return true;
     }
 
@@ -71,10 +74,7 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
     let read_dir = match tokio::fs::read_dir(ILLEGAL_IMAGES_DIR).await {
         Ok(read_dir) => read_dir,
         Err(err) => {
-            println!(
-                "failed create directory reader for illegal image templates: {}",
-                err
-            );
+            warn!("Failed to list illegal image templates, could not audit, assuming safe: {}", err);
             return false;
         }
     };
@@ -85,7 +85,7 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
                 future::ready(
                     template_path
                         .or_else(|err| {
-                            println!("failed to read illegal image template: {}", err);
+                            warn!("Failed to read illegal image template, could not audit, assuming safe: {}", err);
                             Err(())
                         })
                         .ok(),
@@ -106,25 +106,26 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
 ///
 /// This operation is expensive.
 fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
-    println!(
-        "Matching illegal template '{}'...",
+    debug!(
+        "Matching illegal template '{}' against '{}'...",
         template_path
             .file_name()
             .and_then(|name| name.to_str())
-            .unwrap_or("")
+            .unwrap_or(""),
+        path.to_str().unwrap_or("?"),
     );
 
     // Load the user image, return if it's too small
     let image = match image::open(path.as_ref()) {
         Ok(image) => image,
         Err(err) => {
-            println!("Failed to open downloaded image, ignoring: {}", err);
+            warn!("Failed to open image, could not audit, assuming safe: {}", err);
             return false;
         }
     };
     let (x, y) = image.dimensions();
     if x < IMAGE_MIN_SIZE || y < IMAGE_MIN_SIZE {
-        println!("Image too small to match against banned templates, ignoring");
+        info!("Image too small to audit, assuming safe");
         return false;
     }
 
@@ -152,9 +153,9 @@ fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
     let is_similar = score <= IMAGE_BAN_THRESHOLD;
 
     if is_similar {
-        println!("Matched image is illegal! (score: {})", score);
+        warn!("Found illegal image, matches banned template (score: {})", score);
     } else {
-        println!("Matched image is legal (score: {})", score);
+        trace!("Matched image is legal (score: {})", score);
     }
 
     is_similar

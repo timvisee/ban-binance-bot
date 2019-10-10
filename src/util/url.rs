@@ -7,8 +7,9 @@ use url::Url;
 
 lazy_static! {
     // A regex for detecting URLs.
-    static ref URL_REGEX: Regex = Regex::new(r"(?:(?:https?|ftp)://)?(?:\S+(?::\S*)?@|\d{1,3}(?:\.\d{1,3}){3}|(?:(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)(?:\.(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)*(?:\.[a-z\x{00a1}-\x{ffff}]{2,6}))(?::\d+)?(?:[^\s]*)?")
-        .expect("failed to compile URL regex");
+    static ref URL_REGEX: Regex = Regex::new(
+        r"(?:(?:https?|ftp)://)?(?:\S+(?::\S*)?@|\d{1,3}(?:\.\d{1,3}){3}|(?:(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)(?:\.(?:[a-z\d\x{00a1}-\x{ffff}]+-?)*[a-z\d\x{00a1}-\x{ffff}]+)*(?:\.[a-z\x{00a1}-\x{ffff}]{2,6}))(?::\d+)?(?:[^\s]*)?",
+    ).expect("failed to compile URL regex");
 }
 
 /// List all URLs in the given text.
@@ -30,14 +31,14 @@ pub fn find_urls(text: &str) -> Vec<Url> {
         .filter(|url| match url.parse::<hyper::Uri>() {
             Ok(_) => true,
             Err(err) => {
-                println!("Failed to parse URL as URI: {:?}", err);
+                warn!("Failed to parse URL as URI: {}", err);
                 false
             }
         })
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
-                println!("Failed to parse URL: {:?}", err);
+                warn!("Failed to parse URL: {}", err);
                 None
             }
         })
@@ -57,7 +58,7 @@ pub fn find_hidden_urls(entities: &[MessageEntity]) -> Vec<Url> {
         .filter_map(|url| match Url::parse(url.as_str()) {
             Ok(url) => Some(url),
             Err(err) => {
-                println!("Failed to parse URL: {:?}", err);
+                warn!("Failed to parse URL: {}", err);
                 None
             }
         })
@@ -78,14 +79,20 @@ pub async fn follow_url(url: &Url) -> Result<Url, FollowError> {
         .build()
         .expect("failed to build URL forward resolver client");
 
-    println!("Checking URL for redirects: {}", url.as_str());
+    debug!("Test URL for redirects: {}", url.as_str());
 
-    // Send the request, follow the URL, return target URL or last known URL from error
+    // Send request to URL, get last known URL
     // TODO: validate status !response.status.is_success()
-    match client.get(url.as_str()).send().await {
+    let url = match client.get(url.as_str()).send().await {
         Ok(response) => Ok(response.url().clone()),
         Err(err) => err.url().cloned().ok_or(FollowError::Request(err)),
+    };
+
+    if let Ok(url) = &url {
+        trace!("Url lead to: {}", url);
     }
+
+    url
 }
 
 /// URL following error.

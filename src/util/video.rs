@@ -24,7 +24,7 @@ pub async fn extract_frames(path: Arc<TempPath>) -> Result<Arc<TempPath>, ()> {
     let output = frame_path.to_str().expect("failed to get thumb path string");
 
     // Run command to extract video frame
-    println!("Extracting video frame to '{}'...", output);
+    debug!("Extracting video frame to '{}'...", output);
     let status = Command::new("ffmpeg")
         .arg("-i")
         .arg(input)
@@ -42,12 +42,12 @@ pub async fn extract_frames(path: Arc<TempPath>) -> Result<Arc<TempPath>, ()> {
     // Make sure the command succeeded
     match status {
         Err(err) => {
-            println!("Failed to extract video frame, command failed, ignoring: {}", err);
+            error!("Failed to invoke ffmpeg: {}", err);
             return Err(());
         },
         Ok(status) if !status.success() => {
             let code = status.code().map(|c| c.to_string()).unwrap_or_else(|| "?".into());
-            println!("Failed to extract video frame, command had non-zero exit code, ignoring: {}", code);
+            error!("ffmpeg had non-zero exit code: {}", code);
             return Err(());
         },
         Ok(_) => {},

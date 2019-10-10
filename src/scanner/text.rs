@@ -26,7 +26,7 @@ pub fn matches_illegal_text(text: &str) -> bool {
         .iter()
         .any(|illegal| contains_smart(&text, illegal))
     {
-        println!("Found illegal text!");
+        warn!("Found illegal text");
         return true;
     }
 

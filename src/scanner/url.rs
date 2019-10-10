@@ -48,12 +48,12 @@ async fn is_illegal_url(mut url: Url) -> bool {
     match util::url::follow_url(&url).await {
         Ok(ref url) if is_illegal_static_url(url) => return true,
         Ok(new) => url = new,
-        Err(err) => println!("failed to follow URL redirects to audit, ignoring: {:?}", err),
+        Err(err) => debug!("Failed to follow URL redirects, could not audit, assuming safe: {:?}", err),
     }
 
     // Check whether the webpage contains illegal content
     if url_has_illegal_webpage_content(&url).await {
-        println!("Webpage has illegal body! {}", url);
+        warn!("Found illegal URL, webpage has illegal content: {}", url);
         return true;
     }
 
@@ -84,7 +84,7 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
     let response = match client.get(url.as_str()).send().await {
         Ok(response) => response,
         Err(err) => {
-            println!("failed to request webpage body bytes to audit, ignoring: {}", err);
+            debug!("Failed to request webpage content, could not audit, assuming safe: {}", err);
             return false;
         },
     };
@@ -93,7 +93,7 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
     let body = match response.bytes().await {
         Ok(bytes) => bytes,
         Err(err) => {
-            println!("failed to retrieve webpage body bytes to audit, ignoring: {}", err);
+            warn!("Failed to receive webpage content, could not audit, assuming safe: {}", err);
             return false;
         },
     };
@@ -132,7 +132,7 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
         .iter()
         .any(|illegal_host| illegal_host == &host)
     {
-        println!("Found illegal host! {}", url);
+        warn!("Found illegal host: {}", url);
         return true;
     }
 
@@ -141,10 +141,10 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
         .iter()
         .any(|illegal_part| host.contains(illegal_part));
     if illegal {
-        println!("Found illegal host (contains illegal part)! {}", url);
+        warn!("Found illegal host (contains illegal part): {}", url);
         return true;
     }
 
-    println!("Got legal url");
+    debug!("Audited URL as legal: {}", url);
     false
 }
