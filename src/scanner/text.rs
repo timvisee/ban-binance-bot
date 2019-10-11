@@ -18,17 +18,17 @@ pub fn matches_illegal_text(text: &str) -> bool {
         return false;
     }
 
-    // Normalize the text
-    let text = text.trim().to_lowercase();
+    // // Normalize the text
+    // let text = text.trim().to_lowercase();
 
-    // Match ASCII parts against banned text
-    if ILLEGAL_TEXT
-        .iter()
-        .any(|illegal| contains_smart(&text, illegal))
-    {
-        warn!("Found illegal text");
-        return true;
-    }
+    // // Match ASCII parts against banned text
+    // if ILLEGAL_TEXT
+    //     .iter()
+    //     .any(|illegal| contains_smart(&text, illegal))
+    // {
+    //     warn!("Found illegal text");
+    //     return true;
+    // }
 
     false
 }
