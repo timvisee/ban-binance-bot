@@ -127,6 +127,42 @@ mod tests {
         assert!(contains_smart("𐌏ⴖƖγ thе fіr𐑈t 5000 u𐑈егs wἱƖƖ be гewardеd", "Only the first 5000 users will be rewarded"));
         assert!(contains_smart("OnƖy the fἰгѕt 5000 u𐑈егѕ ԝіlƖ ƅe reԝаrdеd", "Only the first 5000 users will be rewarded"));
 
+        // Test a real sample
+        let sample = "Cеlеƅгаtἰng Our Νeԝ Сrуpto Еxchаⴖge - Bἰⴖаnce US\n\
+            \n\
+            Βἰⴖаnсe ἰ𐑈 ρƖea𐑈ed tо aⴖⴖouⴖce thе unmatсhed tгаdἰng teсhnologγ plаtfогm of Bіⴖаnсе tо thе Uⴖited Stаtеѕ аⴖԁ aƖl of Νогth Аmеrἱсa.\n\
+            \n\
+            Τо сеƖеbrаtе thе Ɩauⴖch of Bἰⴖаⴖcе US, we аre rеwагԁіⴖg thе fіrst 5000 раrtἱсἱρaⴖts with 10 tἱmes ԁероsἰt bonuѕ as а ԝay tо thаⴖk оuг faⴖѕ wогƖԁwidе.  Рaгtἱсἱpаte nоԝ\n\
+            \n\
+            (http://t.cn/Ai9qRqfF)Οⴖly the fἰгst 5000 u𐑈eгѕ wἱƖƖ be rеԝагdеd аnd ἰt'𐑈 oⴖ а fἰгѕt соme fἱrst ѕегvеԁ bа𐑈і𐑈. ԚuaƖіfуіng usеrs wἰlƖ гесeivе the ԁeрoѕἱt boⴖus аƖong ԝἱth aⴖ ἰⴖvitatiоn Ɩἱⴖk tо beta teѕt thе neԝ exсhangе. Eνеrу ƅug/haсk/рroƅlem fоuⴖԁ ԝіll ƅe rеwaгԁed (mогe ԁеtail𐑈 upon ѕἰgn-uρ).\n\
+            \n\
+            Еνеⴖt еnds toԁay!\n\
+            \n\
+            ӀΜPOR𐌕АΝΤ: \n\
+            Εach persоⴖ cаⴖ оⴖly рartἱсἰpаtе оnе tἱmе.\n\
+            AƖl ρеrѕon𐑈 aгe аƅle tо рartiсіpatе, іⴖcludἱⴖg those ἱn the Uⴖἱted State𐑈.\n\
+            \n\
+            𐌕о Ɩеагⴖ mоre, ρleaѕе vἱsἰt the lіnk ƅеƖоw:\n\
+            \n\
+            ✅ Click hеrе http://t.cn/Ai9qRqfF\n\
+            \n\
+            Thank уou fоr γouг ѕuрρoгt!\n\
+            \n\
+            Βiⴖаnсе US\
+        ";
+        assert!(contains_smart(sample, "Celebrating Our New Crypto Exchange"));
+        assert!(!contains_smart(sample, "Celebrating Our New Crypto Exchange nope"));
+        assert!(contains_smart(sample, "Binance is pleased to announce the unmatched trading"));
+        assert!(!contains_smart(sample, "Binance is pleased to announce the unmatched trading nope"));
+        assert!(contains_smart(sample, "To celebrate the launch of Binance US"));
+        assert!(!contains_smart(sample, "To celebrate the launch of Binance US nope"));
+        assert!(contains_smart(sample, "Event ends today!"));
+        assert!(!contains_smart(sample, "Event ends today! nope"));
+        assert!(contains_smart(sample, "First 5000 Participants"));
+        assert!(!contains_smart(sample, "First 5000 Participants Bonus"));
+        assert!(contains_smart(sample, "Only the first 5000 users will be rewarded"));
+        assert!(!contains_smart(sample, "Only the first 5000 users will be rewarded nope"));
+
         // Historical false positives
         assert!(!contains_smart("Oh ja tuurlijk, sancties. 🤦🏻‍♂️🤦🏻‍♂️🤦🏻‍♂️🤦🏻‍♂️", "Celebrating Our New Crypto Exchange"));
     }
