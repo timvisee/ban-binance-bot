@@ -28,7 +28,7 @@ pub fn matches_illegal_text(text: &str) -> bool {
     {
         // TODO: ensure this implementation is fixed, and start returning true again
         warn!("Found illegal text");
-        error!("Not actually banning! Preventing possible false positive.");
+        error!("Bypassing ban for illegal text! Preventing possible false positive. Please check this.");
         return false;
     }
 

@@ -38,7 +38,7 @@ impl State {
         let user = match telegram_client.send(GetMe).await {
             Ok(user) => {
                 info!(
-                    "Received bot details via Telegram API (user: {})",
+                    "Received bot details (user: {})",
                     user.username.as_ref().map(|u| u.as_str()).unwrap_or("?"),
                 );
                 user
