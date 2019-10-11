@@ -45,28 +45,35 @@ fn contains_smart(text: &str, contains: &str) -> bool {
         return false;
     }
 
-    // Compare
-    let first = contains.chars().next().unwrap();
-    if !text
-        .chars()
-        .take(contains.len())
-        .enumerate()
-        .filter(|(_, c)| char_matches_smart(*c, first))
-        .filter(|(i, _)| text.len() - i >= contains.len())
-        .any(|(i, _)| {
-            text.chars()
-                .skip(i)
-                .zip(contains.chars())
-                .all(|(a, b)| char_matches_smart(a, b))
-        })
-    {
+    // Get haystack and needle length in characters, skip if haystack not big enough
+    let text_len = text.chars().count();
+    let contains_len = contains.chars().count();
+    if text_len < contains_len {
         return false;
     }
 
-    // At least 10% must be ASCII to be valid
-    let text_len = text.chars().filter(|c| !c.is_whitespace()).count();
-    let min_ascii = 1 + text_len / 10;
-    text.chars().filter(|c| c.is_ascii() && !c.is_whitespace()).count() >= min_ascii
+    // Compare
+    let contains_first = contains.chars().next().unwrap();
+    text
+        .chars()
+        .take(text_len - contains_len)
+        .enumerate()
+        .filter(|(_, c)| char_matches_smart(*c, contains_first))
+        .any(|(i, _)| {
+            // Define set to scan
+            let set = text.chars().skip(i).take(contains_len);
+
+            // Match all ASCII characters, and ensure at least 20% is ASCII
+            set.clone()
+                .zip(contains.chars())
+                .all(|(a, b)| char_matches_smart(a, b))
+            && {
+                // At least 20% must be ASCII to be valid
+                let text_len = set.clone().filter(|c| !c.is_whitespace()).count();
+                let min_ascii = 1 + text_len / 5;
+                set.filter(|c| c.is_ascii() && !c.is_whitespace()).count() >= min_ascii
+            }
+        })
 }
 
 /// Smart check whehter a char matches.
