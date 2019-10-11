@@ -42,14 +42,6 @@ pub const ILLEGAL_TEXT: [&str; 6] = [
     "Event ends today!",
     "First 5000 Participants Bonus",
     "Only the first 5000 users will be rewarded",
-    // "Вinаⴖce US",
-    // "Βἱnаⴖcе US",
-    // "𐌉МΡOR𐌕АΝΤ",
-    // "ⵏMР𐩒RΤΑNТ",
-    // "𐌏ⴖƖγ thе fіr𐑈t 5000 u𐑈егs wἱƖƖ be гewardеd",
-    // "OnƖy the fἰгѕt 5000 u𐑈егѕ ԝіlƖ ƅe reԝаrdеd",
-    // "ⴹνеⴖt еnd𐑈 tоԁау!",
-    // "Ενеⴖt ends tоԁаγ!",
 ];
 
 /// A list of illegal text in webpage bodies.
