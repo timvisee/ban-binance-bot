@@ -3,6 +3,9 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
+#[cfg(feature = "sentry")]
+use std::env;
+
 use dotenv::dotenv;
 use state::State;
 
@@ -21,6 +24,10 @@ async fn main() -> Result<(), UpdateError> {
 
     // Enable logging
     env_logger::init();
+
+    // Initialize Sentry
+    #[cfg(feature = "sentry")]
+    let _guard = init_sentry();
 
     info!("Starting Telegram bot...");
 
@@ -42,4 +49,27 @@ async fn main() -> Result<(), UpdateError> {
     }
 
     app
+}
+
+/// Initialize Sentry.
+///
+/// This returns a guard that must be kept.
+#[cfg(feature = "sentry")]
+fn init_sentry() -> Option<sentry::internals::ClientInitGuard> {
+    // Get the sentry DNS string
+    let dns = match env::var("SENTRY_DNS") {
+        Ok(dns) if !dns.is_empty() => dns,
+        Ok(_) | Err(_) => {
+            info!("Not enabling Sentry, no Sentry DNS configured");
+            return None;
+        },
+    };
+
+    // Initialize Sentry, register some handlers
+    let guard = sentry::init(dns);
+    sentry::integrations::panic::register_panic_handler();
+
+    debug!("Initialized Sentry");
+
+    Some(guard)
 }

@@ -54,11 +54,11 @@ I host a public instance of this bot which you can use in your own groups.
 You can always compile this bot yourself, to host your own instance.
 
 ## Build & runtime requirements
-Currently, Rust nightly is used for the new async/await system for asynchronous
+Currently, Rust beta is used for the new async/await system for asynchronous
 code.
 
 Build requirements:
-- Rust 1.39 (nightly, or higher) (via [rustup](https://rustup.rs): `rustup default nightly`)
+- Rust 1.39 (beta, or higher) (via [rustup](https://rustup.rs): `rustup default beta`)
 - Feature specific:
   - `ocr`: (default, scan images for illegal text)
     - `tesseract`, `leptonica` libraries and `clang`:
@@ -79,8 +79,8 @@ Runtime requirements:
 git clone git@github.com:timvisee/ban-binance-bot.git
 cd ban-binance-bot
 
-# Use Rust nightly in current directory
-rustup override set nightly
+# Use Rust beta in current directory
+rustup override set beta
 
 # Install build and runtime dependencies
 sudo apt-get install libleptonica-dev libtesseract-dev tesseract-ocr-eng clang ffmpeg
