@@ -52,6 +52,8 @@ I host a public instance of this bot which you can use in your own groups.
     - In supergroups; mark the bot as administrator
 
 You can always compile this bot yourself, to host your own instance.
+In that case, please refer to this repository hosting the source code in the
+description and about fields of your bot.
 
 ## Build & runtime requirements
 Currently, Rust beta is used for the new async/await system for asynchronous
@@ -119,13 +121,16 @@ done
 ## Privacy notice
 Once added to a group, this bot scans all following user messages to determine
 whether illegal content is posted. All links are visited to determine whether
-the link to any illegal content. All files (photos, GIFs, ...) are downloaded
+it links to any illegal content. All files (photos, GIFs, ...) are downloaded
 and scanned for illegal content. All content is immediately deleted from the
-servers disk the bot is running on after scanning. This is an automated process
+machine the bot is running on after scanning. This is an automated process
 with no user intervention.
 
 Depending on runtime configuration for the bot, messages detected as spam may
-be forwarded to a logging chat, to collect and monitor all spam.
+be forwarded to a logging chat, including any false-positive detections, to
+collect and monitor all spam. These messages will stay until the logging chat,
+or the specific forwarded message, is deleted. Messages audited as safe are
+never forwarded by this bot.
 
 ## License
 This project is licensed under the GNU GPL-3.0 license.

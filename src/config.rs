@@ -1,6 +1,7 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 26] = [
+pub const ILLEGAL_HOSTS: [&str; 27] = [
     "binance.bnbnetwork.icu",
+    "binance.bnbrelease.icu",
     "binance.dexexchange.icu",
     "binance.dexexchange.site",
     "binance.dexsupport.site",
@@ -29,7 +30,8 @@ pub const ILLEGAL_HOSTS: [&str; 26] = [
 ];
 
 /// A list of illegal URL host parts.
-pub const ILLEGAL_HOST_PARTS: [&str; 9] = [
+pub const ILLEGAL_HOST_PARTS: [&str; 10] = [
+    "binance.bnb",
     "binance.dex",
     "binance.event",
     "binance.exchange",
