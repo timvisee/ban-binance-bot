@@ -1,5 +1,5 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 26] = [
+pub const ILLEGAL_HOSTS: [&str; 25] = [
     "binance.bnbnetwork.icu",
     "binance.dexexchange.icu",
     "binance.dexexchange.site",
@@ -13,7 +13,6 @@ pub const ILLEGAL_HOSTS: [&str; 26] = [
     "binance.marketjersey.icu",
     "binance.marketrelease.icu",
     "binance.mxevent.site",
-    "binance.us",
     "binance.webjersey.icu",
     "event.bnbexchange.services",
     "event.exchangelaunch.services",
@@ -64,11 +63,10 @@ pub const ILLEGAL_WEBPAGE_TEXT: [&str; 7] = [
 
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
-pub const ILLEGAL_IMAGE_TEXT: [&str; 4] = [
+pub const ILLEGAL_IMAGE_TEXT: [&str; 3] = [
     "EVENT ENDS AT MIDNIGHT TODAY",
     "First 5000 Participants Bonus",
     "Catherine Coley",
-    "Binance US",
 ];
 
 /// Directory containing all illegal images.
