@@ -36,6 +36,9 @@ pub async fn read_text(path: Arc<TempPath>) -> Result<String, ()> {
         let mut lt = leptess::LepTess::new(None, "eng").unwrap();
         lt.set_image(path);
 
+        // Assume some image defaults, prevent warnings
+        lt.set_fallback_source_resolution(70);
+
         // Read text from image
         lt.get_utf8_text().map_err(|err| {
             error!("Failed to OCR image: {}", err);
