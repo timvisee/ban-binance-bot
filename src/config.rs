@@ -1,5 +1,5 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 25] = [
+pub const ILLEGAL_HOSTS: [&str; 26] = [
     "binance.bnbnetwork.icu",
     "binance.dexexchange.icu",
     "binance.dexexchange.site",
@@ -10,6 +10,7 @@ pub const ILLEGAL_HOSTS: [&str; 25] = [
     "binance.jerseylaunch.site",
     "binance.jerseymx.site",
     "binance.jerseyonline.icu",
+    "binance.jerseysolution.site",
     "binance.marketjersey.icu",
     "binance.marketrelease.icu",
     "binance.mxevent.site",
@@ -95,7 +96,7 @@ pub const AUDIT_IMAGE_COMPARE: bool = false;
 /// Time after which to self-destruct ban notification messages by this bot.
 ///
 /// Set to `None` to not self-destruct.
-pub const NOTIFY_SELF_DESTRUCT_TIME: Option<u64> = Some(30);
+pub const NOTIFY_SELF_DESTRUCT_TIME: Option<u64> = Some(60);
 
 lazy_static! {
     /// Number of Telegram API updates to process concurrently.
