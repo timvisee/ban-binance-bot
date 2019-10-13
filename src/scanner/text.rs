@@ -26,10 +26,8 @@ pub fn matches_illegal_text(text: &str) -> bool {
         .iter()
         .any(|illegal| contains_smart(&text, illegal))
     {
-        // TODO: ensure this implementation is fixed, and start returning true again
         warn!("Found illegal text");
-        error!("Bypassing ban for illegal text! Preventing possible false positive. Please check this.");
-        return false;
+        return true;
     }
 
     false
