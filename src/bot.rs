@@ -10,6 +10,7 @@ use crate::{
     config::*,
     scanner,
     state::State,
+    traits::ChatUsername,
     util::{self, future::select_true},
 };
 
@@ -217,10 +218,18 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 
     // Annotate forwarded spam message
     if let Some(forward_msg) = forward_msg {
+        // Link 'this' word to specific banned message if possible
+        let msg_this_link = match msg.chat.username_link() {
+            Some(link) => format!("[this]({}/{})", link, msg.id),
+            None => "this".into(),
+        };
+
+        // Format forward annotation message
         let state = state.clone();
         let mut annotate = forward_msg.text_reply(
             format!(
-                "Banned this message from {} in {}.\n\n_Audit took {}._",
+                "Banned {} message from {} in {}.\n\n_Audit took {}._",
+                msg_this_link,
                 util::telegram::format_user_name(&msg.from),
                 util::telegram::format_chat_name(&msg.chat),
                 took,

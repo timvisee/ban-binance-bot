@@ -13,6 +13,7 @@ mod bot;
 mod config;
 mod scanner;
 mod state;
+mod traits;
 mod util;
 
 use bot::UpdateError;
