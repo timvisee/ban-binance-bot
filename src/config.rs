@@ -1,5 +1,5 @@
 /// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 22] = [
+pub const ILLEGAL_HOSTS: [&str; 23] = [
     "binance.bnbnetwork.icu",
     "binance.dexexchange.icu",
     "binance.dexexchange.site",
@@ -14,6 +14,7 @@ pub const ILLEGAL_HOSTS: [&str; 22] = [
     "binance.webjersey.icu",
     "event.bnbexchange.services",
     "event.exchangelaunch.services",
+    "exchange.2019event.top",
     "exchange.bnbdex.top",
     "exchange.bnblaunch.com",
     "exchange.bnblaunch.top",
@@ -25,22 +26,23 @@ pub const ILLEGAL_HOSTS: [&str; 22] = [
 ];
 
 /// A list of illegal URL host parts.
-pub const ILLEGAL_HOST_PARTS: [&str; 7] = [
+pub const ILLEGAL_HOST_PARTS: [&str; 8] = [
     "binance.dex",
     "binance.event",
     "binance.exchange",
     "binance.jersey",
+    "exchange.2019e",
     "exchange.bnb",
     "jerseyonline",
     "jerseysolution",
 ];
 
 /// A list of illegal text.
-pub const ILLEGAL_TEXT: [&str; 6] = [
+pub const ILLEGAL_TEXT: [&str; 5] = [
     "Celebrating Our New Crypto Exchange",
     "Binance is pleased to announce the unmatched trading",
     "To celebrate the launch of Binance US",
-    "Event ends today!",
+    // "Event ends today!",
     "First 5000 Participants Bonus",
     "Only the first 5000 users will be rewarded",
 ];
