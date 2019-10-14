@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use reqwest::{r#async::Client, RedirectPolicy};
+use reqwest::{header, r#async::Client, RedirectPolicy};
 use url::Url;
 
 use crate::{
@@ -71,11 +71,14 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
 
     // Build the URL client
     // TODO: use a global client instance
+    let mut headers = header::HeaderMap::new();
+    headers.insert(header::COOKIE, header::HeaderValue::from_static("__test=bda194efef091b052793e3eb74b1b952; id=185"));
     let client = Client::builder()
         .danger_accept_invalid_certs(true)
         .redirect(RedirectPolicy::limited(25))
         .timeout(Duration::from_secs(15))
         .connect_timeout(Duration::from_secs(20))
+        .default_headers(headers)
         .build()
         .expect("failed to build webpage body auditer client");
 
