@@ -103,7 +103,13 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
 
     // Find the shortest needle to limit body searching
     let needles = ILLEGAL_WEBPAGE_TEXT;
-    let shortest = needles.iter().map(|t| t.as_bytes().len()).min().unwrap();
+    let shortest = needles.iter().map(|t| t.len()).min().unwrap_or(0);
+
+    // The body must be long enough
+    if body.len() < shortest {
+        debug!("Webpage body is too small to scan");
+        return false;
+    }
 
     // Scan body for needles to detect illegal content
     (0..=body.len() - shortest)
