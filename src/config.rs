@@ -59,7 +59,7 @@ pub const ILLEGAL_TEXT: [&str; 5] = [
 ];
 
 /// A list of illegal text in webpage bodies.
-pub const ILLEGAL_WEBPAGE_TEXT: [&str; 7] = [
+pub const ILLEGAL_WEBPAGE_TEXT: [&str; 9] = [
     "First 5000 Participants BTC Giveaway!",
     "Celebrating the launch of our new Crypto Marketplace - Binance US",
     "We are pleased to announce the unmatched trading technology platform of Binance to the United States and all of North America",
@@ -67,6 +67,8 @@ pub const ILLEGAL_WEBPAGE_TEXT: [&str; 7] = [
     "In order to be eligible, participants must have a minimum of 0.02 BTC",
     "Only the first 5000 users will be rewarded and it's on a first come first served basis. Qualifying users will receive the deposit bonus along with an invitation link to beta test Binance US. Every bug/hack/problem found on Binance US will be rewarded up to 10 BTC (more details upon sign-up).",
     "For every BTC contributed, you will receive back 10 times more BTC!",
+    r#"<html><body><script type="text/javascript" src="/aes.js" ></script><script>function toNumbers(d){var e=[];d.replace(/(..)/g"#,
+    r#"&i=1";</script><noscript>This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</noscript></body></html>"#,
 ];
 
 /// A list of illegal text in images.
