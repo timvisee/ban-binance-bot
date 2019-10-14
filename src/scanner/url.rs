@@ -110,7 +110,12 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
         .any(|i| needles
             .iter()
             .filter(|needle| needle.as_bytes().len() <= body.len() - i)
-            .any(|needle| &body[i..i + needle.len()] == needle.as_bytes())
+            .any(|needle| if &body[i..i + needle.len()] == needle.as_bytes() {
+                warn!("Webpage content matched (matched: {:?})", needle.chars().take(32).collect::<String>());
+                true
+            } else {
+                false
+            })
         )
 }
 
