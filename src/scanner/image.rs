@@ -9,26 +9,28 @@ use image::{imageops, FilterType};
 use tempfile::TempPath;
 
 use crate::{
-    config::*,
+    config::{Scanner, Image},
+    // TODO: replace this
+    config::{AUDIT_IMAGE_COMPARE, IMAGE_MIN_SIZE, IMAGE_CONCURRENT_MATCHES},
     util::{self, future::select_true},
 };
 #[cfg(feature = "ocr")]
 use crate::scanner;
 
 /// Check whether the given image is illegal.
-pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
+pub async fn is_illegal_image(config: &Scanner, path: Arc<TempPath>) -> bool {
     debug!("Auditing image at '{:?}'...", path);
 
     let mut checks: Vec<Pin<Box<dyn Future<Output = bool> + Send>>> = vec![];
 
     // Compare images against database of banned images
     if AUDIT_IMAGE_COMPARE {
-        checks.push(matches_illegal_template(path.clone()).boxed());
+        checks.push(matches_illegal_template(&config.image, path.clone()).boxed());
     }
 
     // Check for illegal text in images
     #[cfg(feature = "ocr")]
-    checks.push(has_illegal_text(path.clone()).boxed());
+    checks.push(has_illegal_text(config, path.clone()).boxed());
 
     // Run checks
     select_true(checks).await
@@ -36,7 +38,7 @@ pub async fn is_illegal_image(path: Arc<TempPath>) -> bool {
 
 /// Check whether the images contains any illegal text, with an OCR check.
 #[cfg(feature = "ocr")]
-async fn has_illegal_text(path: Arc<TempPath>) -> bool {
+async fn has_illegal_text(config: &Scanner, path: Arc<TempPath>) -> bool {
     // Read text from image
     let text = match util::image::read_text(path).await {
         Ok(text) => text,
@@ -49,8 +51,8 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
     // Trim and lowercase
     let text = text.trim().to_lowercase();
 
-    // Match the URL against a list of banned host parts
-    let illegal = ILLEGAL_IMAGE_TEXT
+    // Match the image against illegal image text
+    let illegal = config.image.text
         .iter()
         .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
     if illegal {
@@ -59,7 +61,7 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
     }
 
     // Scan for generic illegal text as well, return the result
-    scanner::text::is_illegal_text(text).await
+    scanner::text::is_illegal_text(config, text).await
 }
 
 /// Check whether an image matches an illegal image template.
@@ -69,9 +71,18 @@ async fn has_illegal_text(path: Arc<TempPath>) -> bool {
 ///
 /// True is returned if the image is illegal, false if not.
 /// On error, false is returned as it is assumed the image is allowed.
-async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
+async fn matches_illegal_template<'a>(config: &'a Image, path: Arc<TempPath>) -> bool {
+    // The image dir must be set
+    let image_dir = match config.dir {
+        Some(dir) => dir,
+        None => {
+            warn!("Attempt to audit image by matching, but not image directory is set");
+            return false;
+        },
+    };
+
     // Create a directory reader to list all image templates
-    let read_dir = match tokio::fs::read_dir(ILLEGAL_IMAGES_DIR).await {
+    let read_dir = match tokio::fs::read_dir(image_dir).await {
         Ok(read_dir) => read_dir,
         Err(err) => {
             warn!("Failed to list illegal image templates, could not audit, assuming safe: {}", err);
@@ -93,7 +104,8 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
             })
             .map(|template_path| {
                 let path = path.clone();
-                tokio_executor::blocking::run(move || match_image(path, template_path.path())).boxed()
+                let config = config.clone();
+                tokio_executor::blocking::run(move || match_image(config, path, template_path.path())).boxed()
             })
             .buffer_unordered(*IMAGE_CONCURRENT_MATCHES)
             .filter(|illegal| future::ready(*illegal))
@@ -105,7 +117,7 @@ async fn matches_illegal_template(path: Arc<TempPath>) -> bool {
 /// Check whether the images at the given two paths match.
 ///
 /// This operation is expensive.
-fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
+fn match_image(config: &Image, path: Arc<TempPath>, template_path: PathBuf) -> bool {
     debug!(
         "Matching illegal template '{}' against '{}'...",
         template_path
@@ -150,7 +162,7 @@ fn match_image(path: Arc<TempPath>, template_path: PathBuf) -> bool {
     // Compare the images, obtain the score
     let result = dssim.compare(&template_image, image);
     let score = result.0;
-    let is_similar = score <= IMAGE_BAN_THRESHOLD;
+    let is_similar = score <= config.threshold;
 
     if is_similar {
         warn!("Found illegal image, matches banned template (score: {})", score);

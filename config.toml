@@ -1,0 +1,125 @@
+[general]
+# Time after which to self-destruct ban notification messages by this bot.
+#
+# Set to `None` to not self-destruct.
+notification_self_destruct = 60
+
+[scanner.text]
+# List of illegal text.
+text = [
+    "Celebrating Our New Crypto Exchange",
+    "Binance is pleased to announce the unmatched trading",
+    "To celebrate the launch of Binance US",
+    # "Event ends today!",
+    "First 5000 Participants Bonus",
+    "Only the first 5000 users will be rewarded",
+]
+
+[scanner.web]
+# List of illegal URL hosts.
+hosts = [
+    "binance.bnbnetwork.icu",
+    "binance.bnbrelease.icu",
+    "binance.channelevent.icu",
+    "binance.dexexchange.icu",
+    "binance.dexexchange.site",
+    "binance.dexsupport.site",
+    "binance.dexsupports.icu",
+    "binance.eventonline.icu",
+    "binance.exchangemarket.icu",
+    "binance.jerseylaunch.site",
+    "binance.jerseymx.site",
+    "binance.jerseyonline.icu",
+    "binance.jerseysolution.site",
+    "binance.marketjersey.icu",
+    "binance.marketrelease.icu",
+    "binance.mxevent.site",
+    "binance.webjersey.icu",
+    "event.bnbexchange.services",
+    "event.exchangelaunch.services",
+    "exchange.2019event.top",
+    "exchange.bnbdex.top",
+    "exchange.bnblaunch.com",
+    "exchange.bnblaunch.top",
+    "exchange.bnbproject.services",
+    "exchange.bnbsolutions.services",
+    "exchange.channelevent.top",
+    "exchange.dexmxjersey.services",
+    "exchange.jerseysolution.services",
+    "exchange.marketrelease.services",
+    "exchange.projectdex.services",
+    "mxevent.site",
+]
+
+# List of illegal URL host parts.
+host_parts = [
+    "binance.bnb",
+    "binance.dex",
+    "binance.event",
+    "binance.exchange",
+    "binance.jersey",
+    "binance.market",
+    "exchange.2019e",
+    "exchange.bnb",
+    "exchange.channelevent",
+    "exchange.dexmx",
+    "exchange.projectdex",
+    "jerseyonline",
+    "jerseysolution",
+]
+
+# List of illegal text in webpage bodies.
+text = [
+    "First 5000 Participants BTC Giveaway!",
+    "Celebrating the launch of our new Crypto Marketplace - Binance US",
+    "We are pleased to announce the unmatched trading technology platform of Binance to the United States and all of North America",
+    "To celebrate the launch of Binance US, we are rewarding the first 5000 participants with 10 times deposit bonus",
+    "In order to be eligible, participants must have a minimum of 0.02 BTC",
+    "Only the first 5000 users will be rewarded and it's on a first come first served basis. Qualifying users will receive the deposit bonus along with an invitation link to beta test Binance US. Every bug/hack/problem found on Binance US will be rewarded up to 10 BTC (more details upon sign-up).",
+    "For every BTC contributed, you will receive back 10 times more BTC!",
+    '<html><body><script type="text/javascript" src="/aes.js" ></script><script>function toNumbers(d){var e=[];d.replace(/(..)/g',
+    '&i=1";</script><noscript>This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</noscript></body></html>',
+]
+
+[scanner.image]
+# Directory containing all illegal images.
+dir = "./res/illegal/"
+
+# Images are illegal when their similarity to any template image is `<= threhold`.
+threshold = 0.5
+
+# List of illegal text in images.
+text = [
+    "EVENT ENDS AT MIDNIGHT TODAY",
+    "First 5000 Participants Bonus",
+    "Catherine Coley",
+]
+
+# TODO: Implement the following fields as well
+# /// The maximum file size in bytes of files to check for legality.
+# pub const MAX_FILE_SIZE: i64 = 100 * 1024 * 1024;
+
+# /// The maximum file size in bytes of images to check for legality.
+# pub const IMAGE_MAX_FILE_SIZE: i64 = 20 * 1024 * 1024;
+
+# /// The minimum number of pixels each image side must have.
+# ///
+# /// This is for image matching. Image OCR will run on all images if enabled.
+# pub const IMAGE_MIN_SIZE: u32 = 80;
+
+# /// When auditing, compare images against banned database.
+# ///
+# /// This is expensive when lots of images are listed as banned.
+# // TODO: this seems to leak memory when used a lot, investigate and fix, currently disabled
+# pub const AUDIT_IMAGE_COMPARE: bool = false;
+
+# lazy_static! {
+#     /// Number of Telegram API updates to process concurrently.
+#     pub static ref TELEGRAM_CONCURRENT_UPDATES: usize = num_cpus::get().max(2);
+
+#     /// Number of images to match at the same time.
+#     ///
+#     /// This is the maximum number of matches to run concurrently for each image against the list
+#     /// of banned image templates.
+#     pub static ref IMAGE_CONCURRENT_MATCHES: usize = num_cpus::get();
+# }

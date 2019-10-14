@@ -1,37 +1,61 @@
-/// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 31] = [
-    "binance.bnbnetwork.icu",
-    "binance.bnbrelease.icu",
-    "binance.channelevent.icu",
-    "binance.dexexchange.icu",
-    "binance.dexexchange.site",
-    "binance.dexsupport.site",
-    "binance.dexsupports.icu",
-    "binance.eventonline.icu",
-    "binance.exchangemarket.icu",
-    "binance.jerseylaunch.site",
-    "binance.jerseymx.site",
-    "binance.jerseyonline.icu",
-    "binance.jerseysolution.site",
-    "binance.marketjersey.icu",
-    "binance.marketrelease.icu",
-    "binance.mxevent.site",
-    "binance.webjersey.icu",
-    "event.bnbexchange.services",
-    "event.exchangelaunch.services",
-    "exchange.2019event.top",
-    "exchange.bnbdex.top",
-    "exchange.bnblaunch.com",
-    "exchange.bnblaunch.top",
-    "exchange.bnbproject.services",
-    "exchange.bnbsolutions.services",
-    "exchange.channelevent.top",
-    "exchange.dexmxjersey.services",
-    "exchange.jerseysolution.services",
-    "exchange.marketrelease.services",
-    "exchange.projectdex.services",
-    "mxevent.site",
-];
+use std::fs;
+
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    pub general: General,
+
+    pub scanner: Scanner,
+}
+
+impl Config {
+    /// Load the configuration from the given path.
+    pub fn from_path(path: &str) -> Result<Self, Error> {
+        toml::from_str(
+            &fs::read_to_string(path).map_err(Error::Read)?,
+        ).map_err(Error::Toml)
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    /// Failed to read configuration from disk.
+    Read(std::io::Error),
+
+    /// Toml format error.
+    Toml(toml::de::Error),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct General {
+    pub notification_self_destruct: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Scanner {
+    pub text: Text,
+    pub web: Web,
+    pub image: Image,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Text {
+    pub text: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Web {
+    pub hosts: Vec<String>,
+    pub host_parts: Vec<String>,
+    pub text: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Image {
+    // TODO: change to PathBuf?
+    pub dir: Option<String>,
+    pub threshold: f32,
+    pub text: Vec<String>,
+}
 
 /// A list of illegal URL host parts.
 pub const ILLEGAL_HOST_PARTS: [&str; 13] = [

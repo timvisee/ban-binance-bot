@@ -6,6 +6,8 @@ use telegram_bot::types::{GetFile, File};
 use url::Url;
 
 use crate::{
+    config::Scanner,
+    // TODO: remove this!
     config::*,
     state::State,
     util::{self, future::select_true},
@@ -14,19 +16,19 @@ use crate::{
 /// Check whether any of the given files is illegal.
 ///
 /// A list of `GetFile` requests is given, as the actual files should still be downloaded.
-pub async fn has_illegal_files(files: Vec<GetFile>, state: State) -> bool {
+pub async fn has_illegal_files(config: &Scanner, files: Vec<GetFile>, state: State) -> bool {
     // Build a list of file checks, check them concurrently
     select_true(
         files
         .into_iter()
-        .map(|file| is_illegal_file(file, state.clone()))
+        .map(|file| is_illegal_file(config, file, state.clone()))
     ).await
 }
 
 /// Check whether the given file is illegal.
 ///
 /// A `GetFile` request is given, as the actual file should still be downloaded.
-pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
+pub async fn is_illegal_file(config: &Scanner, file: GetFile, state: State) -> bool {
     // Request download URL for Telegram file
     let (file, url) = match request_telegram_file_url(file, state).await {
         Ok(data) => data,
@@ -65,7 +67,7 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         || url_path.ends_with(".ppm")
         || url_path.ends_with(".pam")
         || url_path.ends_with(".webp") {
-        if is_illegal_image(file, &url).await {
+        if is_illegal_image(config, file, &url).await {
             return true;
         }
     } else if url_path.ends_with(".mts")
@@ -78,7 +80,7 @@ pub async fn is_illegal_file(file: GetFile, state: State) -> bool {
         || url_path.ends_with(".webm") {
         #[cfg(feature = "ffmpeg")]
         {
-            if is_illegal_video(file, &url).await {
+            if is_illegal_video(config, file, &url).await {
                 return true;
             }
         }
@@ -128,7 +130,7 @@ async fn request_telegram_file_url(file: GetFile, state: State) -> Result<(File,
 }
 
 /// Check whether the given Telegram image is an illegal file.
-async fn is_illegal_image(file: File, url: &Url) -> bool {
+async fn is_illegal_image(config: &Scanner, file: File, url: &Url) -> bool {
     // Skip images that are too large
     match file.file_size {
         Some(size) if size > IMAGE_MAX_FILE_SIZE => {
@@ -148,12 +150,12 @@ async fn is_illegal_image(file: File, url: &Url) -> bool {
     };
 
     // Test whether the image file is illegal
-    super::image::is_illegal_image(Arc::new(path)).await
+    super::image::is_illegal_image(config, Arc::new(path)).await
 }
 
 /// Check whether the given Telegram video is an illegal file.
 #[cfg(feature = "ffmpeg")]
-async fn is_illegal_video(_: File, url: &Url) -> bool {
+async fn is_illegal_video(config: &Scanner, _: File, url: &Url) -> bool {
     // Download the file to a temporary file to test on
     let path = match util::download::download_temp(url).await {
         Ok(response) => response.1,
@@ -173,5 +175,5 @@ async fn is_illegal_video(_: File, url: &Url) -> bool {
     };
 
     // Test whether the image file is illegal
-    super::image::is_illegal_image(frame_file).await
+    super::image::is_illegal_image(config, frame_file).await
 }

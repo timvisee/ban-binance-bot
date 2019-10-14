@@ -4,31 +4,32 @@ use reqwest::{header, r#async::Client, RedirectPolicy};
 use url::Url;
 
 use crate::{
-    config::*,
+    config::Web,
     util::{self, future::select_true},
 };
 
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub async fn contains_illegal_urls(text: &str) -> bool {
+pub async fn contains_illegal_urls(config: &Web, text: &str) -> bool {
     // Find URLs in the message, return if there are none
     let urls = util::url::find_urls(text);
     if urls.is_empty() {
         return false;
     }
 
-    any_illegal_url(urls).await
+    any_illegal_url(config, urls).await
 }
 
 /// Check whether the given list of URLs contains any illegal URL.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub async fn any_illegal_url<I>(urls: I) -> bool
+pub async fn any_illegal_url<I>(config: &Web, urls: I) -> bool
     where I: IntoIterator<Item = Url>,
 {
     // Test each URL concurrently
-    select_true(urls.into_iter().map(is_illegal_url)).await
+    let test = |url| is_illegal_url(config, url);
+    select_true(urls.into_iter().map(test)).await
 }
 
 /// Check whether the given URL is illegal.
@@ -38,21 +39,21 @@ pub async fn any_illegal_url<I>(urls: I) -> bool
 /// Returns `Ok` if the URL is illegal, `Err` otherwise.
 /// Errors are silently dropped and it will then be assumed that the URL is allowed.
 /// This allows the use of `futures::future::select_ok`.
-async fn is_illegal_url(mut url: Url) -> bool {
+async fn is_illegal_url(config: &Web, mut url: Url) -> bool {
     // The given URL must not be illegal
-    if is_illegal_static_url(&url) {
+    if is_illegal_static_url(config, &url) {
         return true;
     }
 
     // Follow URL redirects
     match util::url::follow_url(&url).await {
-        Ok(ref url) if is_illegal_static_url(url) => return true,
+        Ok(ref url) if is_illegal_static_url(config, url) => return true,
         Ok(new) => url = new,
         Err(err) => debug!("Failed to follow URL redirects, could not audit, assuming safe: {:?}", err),
     }
 
     // Check whether the webpage contains illegal content
-    if url_has_illegal_webpage_content(&url).await {
+    if url_has_illegal_webpage_content(config, &url).await {
         warn!("Found illegal URL, webpage has illegal content: {}", url);
         return true;
     }
@@ -63,9 +64,9 @@ async fn is_illegal_url(mut url: Url) -> bool {
 /// Check whether the given URL routes to illegal content.
 ///
 /// This scans the body of the webpage that is responded with.
-async fn url_has_illegal_webpage_content(url: &Url) -> bool {
+async fn url_has_illegal_webpage_content(config: &Web, url: &Url) -> bool {
     // We must have illegal webpage text configured
-    if ILLEGAL_WEBPAGE_TEXT.is_empty() {
+    if config.text.is_empty() {
         return false;
     }
 
@@ -102,7 +103,7 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
     };
 
     // Find the shortest needle to limit body searching
-    let needles = ILLEGAL_WEBPAGE_TEXT;
+    let needles = &config.text;
     let shortest = needles.iter().map(|t| t.len()).min().unwrap_or(0);
 
     // The body must be long enough
@@ -128,9 +129,9 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
 /// Check wheher the given URL is illegal.
 ///
 /// This checks the static URL, and does not do any redirect checking.
-pub fn is_illegal_static_url(url: &Url) -> bool {
+pub fn is_illegal_static_url(config: &Web, url: &Url) -> bool {
     // We must have illegal hosts or parts configured
-    if ILLEGAL_HOSTS.is_empty() && ILLEGAL_HOST_PARTS.is_empty() {
+    if config.hosts.is_empty() && config.host_parts.is_empty() {
         return false;
     }
 
@@ -142,7 +143,7 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
     let host = host.trim().to_lowercase();
 
     // Match the URL against a list of banned hosts
-    if ILLEGAL_HOSTS
+    if config.hosts
         .iter()
         .any(|illegal_host| illegal_host == &host)
     {
@@ -151,7 +152,7 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
     }
 
     // Match the URL against a list of banned host parts
-    let illegal = ILLEGAL_HOST_PARTS
+    let illegal = config.host_parts
         .iter()
         .any(|illegal_part| host.contains(illegal_part));
     if illegal {

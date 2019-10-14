@@ -1,20 +1,20 @@
-use crate::config::ILLEGAL_TEXT;
+use crate::config::{Scanner, Text};
 
 /// Check whether the given text is illegal.
-pub async fn is_illegal_text(text: String) -> bool {
+pub async fn is_illegal_text(config: &Scanner, text: String) -> bool {
     // Check for illegal text
-    if matches_illegal_text(&text) {
+    if matches_illegal_text(&config.text, &text) {
         return true;
     }
 
     // Check for illegal URLs
-    super::url::contains_illegal_urls(&text).await
+    super::url::contains_illegal_urls(&config.web, &text).await
 }
 
 /// Check whether the text contains illegal parts.
-pub fn matches_illegal_text(text: &str) -> bool {
+pub fn matches_illegal_text(config: &Text, text: &str) -> bool {
     // We must have illegal text configured
-    if ILLEGAL_TEXT.is_empty() {
+    if config.text.is_empty() {
         return false;
     }
 
@@ -22,7 +22,7 @@ pub fn matches_illegal_text(text: &str) -> bool {
     let text = text.trim().to_lowercase();
 
     // Match ASCII parts against banned text
-    if ILLEGAL_TEXT
+    if config.text
         .iter()
         .any(|illegal| contains_smart(&text, illegal))
     {
