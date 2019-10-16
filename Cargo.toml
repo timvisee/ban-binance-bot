@@ -28,9 +28,9 @@ imgref = "1.4"
 lazy_static = "1.4"
 leptess = { version = "0.7.4", optional = true }
 log = "0.4"
-num_cpus = "1.0"
+num_cpus = "1"
 regex = "1"
-reqwest = "0.10.0-alpha.0"
+reqwest = "0.10.0-alpha.1"
 rgb = "0.8"
 sentry = { version = "0.17", optional = true }
 tempfile = "3.1"
@@ -44,6 +44,6 @@ url = "2.1"
 hyper = { version = "0.13.0-alpha.4", default-features = false, features = ["tcp"] }
 
 [dependencies.telegram-bot]
-version = "*"
+version = "0.7.0-alpha.0"
 git = "https://github.com/telegram-rs/telegram-bot"
-rev = "fb8ed37"
+rev = "3c0babc"
