@@ -109,7 +109,7 @@ pub const IMAGE_MIN_SIZE: u32 = 80;
 ///
 /// This is expensive when lots of images are listed as banned.
 // TODO: this seems to leak memory when used a lot, investigate and fix, currently disabled
-pub const AUDIT_IMAGE_COMPARE: bool = false;
+pub const AUDIT_IMAGE_COMPARE: bool = true;
 
 /// Time after which to self-destruct ban notification messages by this bot.
 ///
