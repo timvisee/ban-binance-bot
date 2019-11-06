@@ -74,6 +74,12 @@ pub const ILLEGAL_WEBPAGE_TEXT: [&str; 9] = [
     r#"&i=1";</script><noscript>This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</noscript></body></html>"#,
 ];
 
+/// A list of hosts for URLs that should be scanned if appearing on the webpage.
+pub const SCAN_WEBPAGE_URL_HOSTS: [&str; 2] = [
+    "tinyurl.com",
+    "t.cn",
+];
+
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 3] = [

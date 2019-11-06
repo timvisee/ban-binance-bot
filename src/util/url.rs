@@ -8,6 +8,8 @@ use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
 use telegram_bot::types::{MessageEntity, MessageEntityKind};
 use url::Url;
 
+use crate::config::SCAN_WEBPAGE_URL_HOSTS;
+
 lazy_static! {
     // A regex for detecting URLs.
     static ref URL_REGEX: Regex = Regex::new(
@@ -39,7 +41,10 @@ pub fn find_page_urls(body: &[u8]) -> Vec<Url> {
     // Body needs to be UTF-8 for URL scanning
     let body = match str::from_utf8(body) {
         Ok(body) => body,
-        Err(err) => return vec![],
+        Err(err) => {
+            warn!("Could not scan URLs in webpage body because it isn't UTF-8, assuming safe: {}", err);
+            return vec![];
+        },
     };
 
     // Set up link finder
@@ -50,8 +55,13 @@ pub fn find_page_urls(body: &[u8]) -> Vec<Url> {
     // Find URLs
     finder.links(body)
         .map(|link| link.as_str())
-        .filter(|link| link.contains("https://tinyurl.com"))
         .filter_map(parse_url)
+        .filter(|url| match url.host_str() {
+            Some(host) => SCAN_WEBPAGE_URL_HOSTS
+                .iter()
+                .any(|scan_host| scan_host == &host),
+            None => false,
+        })
         .dedup()
         .collect()
 }
