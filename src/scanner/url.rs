@@ -1,11 +1,12 @@
 use std::time::Duration;
 
+use futures::future::{BoxFuture, FutureExt};
 use reqwest::{header, r#async::Client, RedirectPolicy};
 use url::Url;
 
 use crate::{
     config::*,
-    util::{self, future::select_true},
+    util::{self, future::select_true, url::find_page_urls},
 };
 
 /// Check whether the given text contains any illegal URLs.
@@ -24,11 +25,15 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
 /// Check whether the given list of URLs contains any illegal URL.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub async fn any_illegal_url<I>(urls: I) -> bool
-    where I: IntoIterator<Item = Url>,
+pub fn any_illegal_url<'a, I>(urls: I) -> BoxFuture<'a, bool>
+where
+    I: IntoIterator<Item = Url> + Send + 'a,
+    I::IntoIter: Send,
 {
-    // Test each URL concurrently
-    select_true(urls.into_iter().map(is_illegal_url)).await
+    async {
+        // Test each URL concurrently
+        select_true(urls.into_iter().map(is_illegal_url)).await
+    }.boxed()
 }
 
 /// Check whether the given URL is illegal.
@@ -112,7 +117,7 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
     }
 
     // Scan body for needles to detect illegal content
-    (0..=body.len() - shortest)
+    let has_illegal_text = (0..=body.len() - shortest)
         .any(|i| needles
             .iter()
             .filter(|needle| needle.as_bytes().len() <= body.len() - i)
@@ -122,7 +127,13 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
             } else {
                 false
             })
-        )
+        );
+    if has_illegal_text {
+        return true;
+    }
+
+    // Audit any sketchy URLs from the webpage body as well
+    any_illegal_url(find_page_urls(&body)).await
 }
 
 /// Check wheher the given URL is illegal.

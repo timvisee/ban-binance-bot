@@ -25,8 +25,10 @@ env_logger = "0.7"
 futures-preview = { version = "0.3.0-alpha.19", features = ["async-await"] }
 image = "0.22"
 imgref = "1.4"
+itertools = "0.8"
 lazy_static = "1.4"
 leptess = { version = "0.7.4", optional = true }
+linkify = { git = "https://github.com/timvisee/linkify.git", version = "*" }
 log = "0.4"
 num_cpus = "1"
 regex = "1"
@@ -46,4 +48,4 @@ hyper = { version = "0.13.0-alpha.4", default-features = false, features = ["tcp
 [dependencies.telegram-bot]
 version = "0.7.0-alpha.0"
 git = "https://github.com/telegram-rs/telegram-bot"
-rev = "3c0babc"
+rev = "5c06eb4"
