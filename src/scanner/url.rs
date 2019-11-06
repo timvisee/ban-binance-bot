@@ -19,20 +19,20 @@ pub async fn contains_illegal_urls(text: &str) -> bool {
         return false;
     }
 
-    any_illegal_url(urls).await
+    any_illegal_url(urls, 0).await
 }
 
 /// Check whether the given list of URLs contains any illegal URL.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub fn any_illegal_url<'a, I>(urls: I) -> BoxFuture<'a, bool>
+pub fn any_illegal_url<'a, I>(urls: I, depth: usize) -> BoxFuture<'a, bool>
 where
     I: IntoIterator<Item = Url> + Send + 'a,
     I::IntoIter: Send,
 {
-    async {
+    async move {
         // Test each URL concurrently
-        select_true(urls.into_iter().map(is_illegal_url)).await
+        select_true(urls.into_iter().map(|url| is_illegal_url(url, depth))).await
     }.boxed()
 }
 
@@ -43,7 +43,7 @@ where
 /// Returns `Ok` if the URL is illegal, `Err` otherwise.
 /// Errors are silently dropped and it will then be assumed that the URL is allowed.
 /// This allows the use of `futures::future::select_ok`.
-async fn is_illegal_url(mut url: Url) -> bool {
+async fn is_illegal_url(mut url: Url, depth: usize) -> bool {
     // The given URL must not be illegal
     if is_illegal_static_url(&url) {
         return true;
@@ -57,7 +57,7 @@ async fn is_illegal_url(mut url: Url) -> bool {
     }
 
     // Check whether the webpage contains illegal content
-    if url_has_illegal_webpage_content(&url).await {
+    if url_has_illegal_webpage_content(&url, depth).await {
         warn!("Found illegal URL, webpage has illegal content: {}", url);
         return true;
     }
@@ -68,7 +68,7 @@ async fn is_illegal_url(mut url: Url) -> bool {
 /// Check whether the given URL routes to illegal content.
 ///
 /// This scans the body of the webpage that is responded with.
-async fn url_has_illegal_webpage_content(url: &Url) -> bool {
+async fn url_has_illegal_webpage_content(url: &Url, depth: usize) -> bool {
     // We must have illegal webpage text configured
     if ILLEGAL_WEBPAGE_TEXT.is_empty() {
         return false;
@@ -133,7 +133,15 @@ async fn url_has_illegal_webpage_content(url: &Url) -> bool {
     }
 
     // Audit any sketchy URLs from the webpage body as well
-    any_illegal_url(find_page_urls(&body)).await
+    if depth < MAX_DEPTH {
+        if any_illegal_url(find_page_urls(&body), depth + 1).await {
+            return true;
+        }
+    } else {
+        warn!("Not scanning URLs on webpage conten, reached depth {}, assuming safe", depth);
+    }
+
+    false
 }
 
 /// Check wheher the given URL is illegal.

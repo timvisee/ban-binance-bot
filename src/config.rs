@@ -105,6 +105,12 @@ pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 /// This is for image matching. Image OCR will run on all images if enabled.
 pub const IMAGE_MIN_SIZE: u32 = 80;
 
+/// The max depth for scanning URLs.
+///
+/// This manages how deep this bot will go with scanning URLs on webpages recursively.
+/// Following many URL redirects counts as 1 depth.
+pub const MAX_DEPTH: usize = 4;
+
 /// When auditing, compare images against banned database.
 ///
 /// This is expensive when lots of images are listed as banned.

@@ -303,7 +303,7 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
             MessageKind::Text { entities, .. } =>  {
                 let urls = util::url::find_hidden_urls(entities);
                 if !urls.is_empty() {
-                    checks.push(scanner::url::any_illegal_url(urls).boxed());
+                    checks.push(scanner::url::any_illegal_url(urls, 0).boxed());
                 }
             }
             _ => {},

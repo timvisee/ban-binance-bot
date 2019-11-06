@@ -42,7 +42,7 @@ pub fn find_page_urls(body: &[u8]) -> Vec<Url> {
     let body = match str::from_utf8(body) {
         Ok(body) => body,
         Err(err) => {
-            warn!("Could not scan URLs in webpage body because it isn't UTF-8, assuming safe: {}", err);
+            debug!("Could not scan URLs in webpage body because it isn't UTF-8, assuming safe: {}", err);
             return vec![];
         },
     };
