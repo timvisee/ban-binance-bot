@@ -76,12 +76,7 @@ pub const ILLEGAL_WEBPAGE_TEXT: [&str; 9] = [
 ];
 
 /// A list of hosts for URLs that should be scanned if appearing on the webpage.
-pub const SCAN_WEBPAGE_URL_HOSTS: [&str; 4] = [
-    "bit.ly",
-    "t.cn",
-    "t.co",
-    "tinyurl.com",
-];
+pub const SCAN_WEBPAGE_URL_HOSTS: [&str; 4] = ["bit.ly", "t.cn", "t.co", "tinyurl.com"];
 
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
