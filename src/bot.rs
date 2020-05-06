@@ -2,7 +2,11 @@ use std::env;
 use std::time::Duration;
 
 use futures::prelude::*;
-use telegram_bot::{prelude::*, types::{ChatId, Message, Update, MessageKind, MessageChat, UpdateKind, ParseMode}, Error as TelegramError};
+use telegram_bot::{
+    prelude::*,
+    types::{ChatId, Message, MessageChat, MessageKind, ParseMode, Update, UpdateKind},
+    Error as TelegramError,
+};
 use tokio::timer::delay_for;
 use took::Timer;
 
@@ -35,7 +39,10 @@ pub async fn build_telegram_handler(state: State) -> Result<(), UpdateError> {
 }
 
 /// Handle the given Telegram API update.
-async fn handle_update(state: State, update: Result<Update, TelegramError>) -> Result<(), UpdateError> {
+async fn handle_update(
+    state: State,
+    update: Result<Update, TelegramError>,
+) -> Result<(), UpdateError> {
     // Make sure we received a new update
     // TODO: do not drop error here
     let update = update.map_err(UpdateError::Telegram)?;
@@ -44,7 +51,7 @@ async fn handle_update(state: State, update: Result<Update, TelegramError>) -> R
     match update.kind {
         UpdateKind::Message(msg) => match &msg.chat {
             MessageChat::Private(..) => handle_private(&state, &msg).await?,
-            _ =>  handle_message(msg, state.clone()).await?,
+            _ => handle_message(msg, state.clone()).await?,
         },
         UpdateKind::EditedMessage(msg) => handle_message(msg, state.clone()).await?,
         _ => {}
@@ -155,7 +162,9 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 
     // Forward the message to the global spam log chat
     let mut forward_msg = None;
-    let forward_chat_id = env::var("GLOBAL_SPAM_LOG_CHAT_ID").ok().and_then(|id| id.parse().ok());
+    let forward_chat_id = env::var("GLOBAL_SPAM_LOG_CHAT_ID")
+        .ok()
+        .and_then(|id| id.parse().ok());
     if let Some(id) = forward_chat_id {
         // Do not forward if in same chat
         let id = ChatId::new(id);
@@ -173,7 +182,10 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
     // Delete the user message
     let delete = state.telegram_client().send(msg.delete()).await;
     if let Err(err) = &delete {
-        warn!("Failed to delete spam message, might not have enough permission: {}", err);
+        warn!(
+            "Failed to delete spam message, might not have enough permission: {}",
+            err
+        );
     }
 
     // Build the notification to share in the chat
@@ -190,16 +202,16 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
             }
         )
     } else {
-        format!(
-            "Automatically banned {} for posting spam/phishing.",
-            name,
-        )
+        format!("Automatically banned {} for posting spam/phishing.", name,)
     };
 
     // Add self-destruct notice
     let self_destruct = NOTIFY_SELF_DESTRUCT_TIME.is_some();
     if self_destruct {
-        notification += &format!("\n\n_This message will self-destruct in {} seconds..._", NOTIFY_SELF_DESTRUCT_TIME.unwrap());
+        notification += &format!(
+            "\n\n_This message will self-destruct in {} seconds..._",
+            NOTIFY_SELF_DESTRUCT_TIME.unwrap()
+        );
     }
 
     // Attempt to send a ban notification to the chat
@@ -226,23 +238,24 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
 
         // Format forward annotation message
         let state = state.clone();
-        let mut annotate = forward_msg.text_reply(
-            format!(
-                "Banned {} message from {} in {}.\n\n_Audit took {}._",
-                msg_this_link,
-                util::telegram::format_user_name(&msg.from),
-                util::telegram::format_chat_name(&msg.chat),
-                took,
-            )
-        );
+        let mut annotate = forward_msg.text_reply(format!(
+            "Banned {} message from {} in {}.\n\n_Audit took {}._",
+            msg_this_link,
+            util::telegram::format_user_name(&msg.from),
+            util::telegram::format_chat_name(&msg.chat),
+            took,
+        ));
 
         tokio::spawn(async move {
             // Wait, prevent throttling, then annotate the forwarded spam
             delay_for(Duration::from_secs(2)).await;
-            state.telegram_client().send(annotate
-                    .parse_mode(ParseMode::Markdown)
-                    .disable_preview()
-                    .disable_notification()
+            state
+                .telegram_client()
+                .send(
+                    annotate
+                        .parse_mode(ParseMode::Markdown)
+                        .disable_preview()
+                        .disable_notification(),
                 )
                 .inspect_err(|err| warn!("Failed to annotate forwarded spam message: {:?}", err))
                 .map(|_| ())
@@ -256,7 +269,9 @@ async fn handle_message(msg: Message, state: State) -> Result<(), ()> {
             tokio::spawn(async move {
                 // Wait, then self destruct the message
                 delay_for(Duration::from_secs(NOTIFY_SELF_DESTRUCT_TIME.unwrap())).await;
-                state.telegram_client().send(msg.delete())
+                state
+                    .telegram_client()
+                    .send(msg.delete())
                     .inspect_err(|err| warn!("Failed to self-destruct ban notification: {:?}", err))
                     .map(|_| ())
                     .await
@@ -276,17 +291,23 @@ fn log_added_removed(msg: &Message, state: &State) -> bool {
     match &msg.kind {
         MessageKind::NewChatMembers { data } => {
             if data.into_iter().any(|u| state.is_bot_user(u)) {
-                info!("Bot was added to {}", util::telegram::format_chat_name_log(&msg.chat));
+                info!(
+                    "Bot was added to {}",
+                    util::telegram::format_chat_name_log(&msg.chat)
+                );
                 return true;
             }
-        },
+        }
         MessageKind::LeftChatMember { data } => {
             if state.is_bot_user(data) {
-                info!("Bot was removed from {}", util::telegram::format_chat_name_log(&msg.chat));
+                info!(
+                    "Bot was removed from {}",
+                    util::telegram::format_chat_name_log(&msg.chat)
+                );
                 return true;
             }
-        },
-        _ => {},
+        }
+        _ => {}
     }
 
     false
@@ -300,13 +321,15 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
     if let Some(text) = msg.text() {
         // Scan any hidden URLs
         match &msg.kind {
-            MessageKind::Text { entities, .. } =>  {
+            MessageKind::Text { entities, .. } => {
                 let urls = util::url::find_hidden_urls(entities);
                 if !urls.is_empty() {
-                    checks.push(scanner::url::any_illegal_url(&state.config().scanner.web, urls).boxed());
+                    checks.push(
+                        scanner::url::any_illegal_url(&state.config().scanner.web, urls, 0).boxed(),
+                    );
                 }
             }
-            _ => {},
+            _ => {}
         }
 
         // Scan the regular text
@@ -316,7 +339,9 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.get_files() {
         // TODO: do not clone state here
-        checks.push(scanner::file::has_illegal_files(&state.config().scanner, files, state.clone()).boxed());
+        checks.push(
+            scanner::file::has_illegal_files(&state.config().scanner, files, state.clone()).boxed(),
+        );
     }
 
     select_true(checks).await

@@ -1,9 +1,14 @@
+use std::str;
 use std::time::Duration;
 
+use itertools::Itertools;
+use linkify::{LinkFinder, LinkKind};
 use regex::Regex;
 use reqwest::{r#async::Client, Error as ResponseError, RedirectPolicy};
 use telegram_bot::types::{MessageEntity, MessageEntityKind};
 use url::Url;
+
+use crate::config::SCAN_WEBPAGE_URL_HOSTS;
 
 lazy_static! {
     // A regex for detecting URLs.
@@ -26,22 +31,38 @@ pub fn find_urls(text: &str) -> Vec<Url> {
             }
             url
         })
-        // TODO: remove this filter once proper URL checking is implemented in reqwest
-        // Issue: https://github.com/seanmonstar/reqwest/issues/668
-        .filter(|url| match url.parse::<hyper::Uri>() {
-            Ok(_) => true,
-            Err(err) => {
-                warn!("Failed to parse URL '{}' as URI: {}", url, err);
-                false
-            }
+        .filter_map(|url| parse_url(&url))
+        .dedup()
+        .collect()
+}
+
+/// List all sketchy URLs from a page body to scan.
+pub fn find_page_urls(body: &[u8]) -> Vec<Url> {
+    // Body needs to be UTF-8 for URL scanning
+    let body = match str::from_utf8(body) {
+        Ok(body) => body,
+        Err(err) => {
+            debug!("Could not scan URLs in webpage body because it isn't UTF-8, assuming safe: {}", err);
+            return vec![];
+        },
+    };
+
+    // Set up link finder
+    let mut finder = LinkFinder::new();
+    finder.kinds(&[LinkKind::Url]);
+    finder.url_must_have_scheme(false);
+
+    // Find URLs
+    finder.links(body)
+        .map(|link| link.as_str())
+        .filter_map(parse_url)
+        .filter(|url| match url.host_str() {
+            Some(host) => SCAN_WEBPAGE_URL_HOSTS
+                .iter()
+                .any(|scan_host| scan_host == &host),
+            None => false,
         })
-        .filter_map(|url| match Url::parse(url.as_str()) {
-            Ok(url) => Some(url),
-            Err(err) => {
-                warn!("Failed to parse URL: {}", err);
-                None
-            }
-        })
+        .dedup()
         .collect()
 }
 
@@ -52,17 +73,35 @@ pub fn find_hidden_urls(entities: &[MessageEntity]) -> Vec<Url> {
     entities
         .iter()
         .filter_map(|entity| match entity.kind {
-            MessageEntityKind::TextLink(ref url) => Some(url),
+            MessageEntityKind::TextLink(ref url) => Some(url.as_str()),
             _ => None,
         })
-        .filter_map(|url| match Url::parse(url.as_str()) {
+        .filter_map(parse_url)
+        .dedup()
+        .collect()
+}
+
+/// Parse the given URL.
+///
+/// This does multiple parsing checks to ensure the URL is successfully used throughout this
+/// application.
+/// An `Url` is outputted.
+// TODO: remove this filter once proper URL checking is implemented in reqwest
+// Issue: https://github.com/seanmonstar/reqwest/issues/668
+fn parse_url(url: &str) -> Option<Url> {
+    match url.parse::<hyper::Uri>() {
+        Ok(_) => match Url::parse(url) {
             Ok(url) => Some(url),
             Err(err) => {
                 warn!("Failed to parse URL: {}", err);
                 None
             }
-        })
-        .collect()
+        },
+        Err(err) => {
+            warn!("Failed to parse URL '{}' as URI: {}", url, err);
+            None
+        }
+    }
 }
 
 /// Follow redirects on the given URL, and return the final full URL.

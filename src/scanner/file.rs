@@ -107,6 +107,10 @@ async fn request_telegram_file(file: GetFile, state: State) -> Result<File, ()> 
             error!("Failed to request file data from Telegram API: {:?}", err);
             ()
         })
+        .and_then(|file| file.ok_or_else(|| {
+            error!("Expected file data from Telegram API, but did not receive anything");
+            ()
+        }))
 }
 
 /// Get download URL for Telegram API `GetFile`.

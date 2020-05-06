@@ -10,9 +10,7 @@ pub struct Config {
 impl Config {
     /// Load the configuration from the given path.
     pub fn from_path(path: &str) -> Result<Self, Error> {
-        toml::from_str(
-            &fs::read_to_string(path).map_err(Error::Read)?,
-        ).map_err(Error::Toml)
+        toml::from_str(&fs::read_to_string(path).map_err(Error::Read)?).map_err(Error::Toml)
     }
 }
 
@@ -97,6 +95,9 @@ pub const ILLEGAL_WEBPAGE_TEXT: [&str; 9] = [
     r#"&i=1";</script><noscript>This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</noscript></body></html>"#,
 ];
 
+/// A list of hosts for URLs that should be scanned if appearing on the webpage.
+pub const SCAN_WEBPAGE_URL_HOSTS: [&str; 4] = ["bit.ly", "t.cn", "t.co", "tinyurl.com"];
+
 /// A list of illegal text in images.
 #[cfg(feature = "ocr")]
 pub const ILLEGAL_IMAGE_TEXT: [&str; 3] = [
@@ -122,11 +123,17 @@ pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 /// This is for image matching. Image OCR will run on all images if enabled.
 pub const IMAGE_MIN_SIZE: u32 = 80;
 
+/// The max depth for scanning URLs.
+///
+/// This manages how deep this bot will go with scanning URLs on webpages recursively.
+/// Following many URL redirects counts as 1 depth.
+pub const MAX_DEPTH: usize = 4;
+
 /// When auditing, compare images against banned database.
 ///
 /// This is expensive when lots of images are listed as banned.
 // TODO: this seems to leak memory when used a lot, investigate and fix, currently disabled
-pub const AUDIT_IMAGE_COMPARE: bool = false;
+pub const AUDIT_IMAGE_COMPARE: bool = true;
 
 /// Time after which to self-destruct ban notification messages by this bot.
 ///

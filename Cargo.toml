@@ -2,7 +2,7 @@
 name = "ban-binance-bot"
 description = "A Telegram bot to ban users advertising Binance promotions."
 version = "0.2.0"
-authors = ["timvisee <tim@visee.me>"]
+authors = ["timvisee <3a4fb3964f@sinenomine.email>"]
 edition = "2018"
 homepage = "https://gitlab.com/timvisee/ban-binance-bot"
 repository = "https://gitlab.com/timvisee/ban-binance-bot"
@@ -19,18 +19,20 @@ ffmpeg = ["tokio/process"]
 ocr = ["leptess"]
 
 [dependencies]
-dotenv = "0.14"
+dotenv = "0.15"
 dssim = "2.9"
 env_logger = "0.7"
 futures-preview = { version = "0.3.0-alpha.19", features = ["async-await"] }
 image = "0.22"
 imgref = "1.4"
+itertools = "0.8"
 lazy_static = "1.4"
-leptess = { version = "0.7.4", optional = true }
+leptess = { version = "0.8.0", optional = true }
+linkify = { git = "https://github.com/timvisee/linkify.git", version = "*" }
 log = "0.4"
-num_cpus = "1.0"
+num_cpus = "1"
 regex = "1"
-reqwest = "0.10.0-alpha.0"
+reqwest = "0.10.0-alpha.1"
 rgb = "0.8"
 sentry = { version = "0.17", optional = true }
 serde = "1.0"
@@ -46,6 +48,6 @@ url = "2.1"
 hyper = { version = "0.13.0-alpha.4", default-features = false, features = ["tcp"] }
 
 [dependencies.telegram-bot]
-version = "*"
+version = "0.7.0-alpha.0"
 git = "https://github.com/telegram-rs/telegram-bot"
-rev = "fb8ed37"
+rev = "5c06eb4"
