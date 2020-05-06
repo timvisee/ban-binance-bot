@@ -97,32 +97,3 @@ text = [
     "First 5000 Participants Bonus",
     "Catherine Coley",
 ]
-
-# TODO: Implement the following fields as well
-# /// The maximum file size in bytes of files to check for legality.
-# pub const MAX_FILE_SIZE: i64 = 100 * 1024 * 1024;
-
-# /// The maximum file size in bytes of images to check for legality.
-# pub const IMAGE_MAX_FILE_SIZE: i64 = 20 * 1024 * 1024;
-
-# /// The minimum number of pixels each image side must have.
-# ///
-# /// This is for image matching. Image OCR will run on all images if enabled.
-# pub const IMAGE_MIN_SIZE: u32 = 80;
-
-# /// When auditing, compare images against banned database.
-# ///
-# /// This is expensive when lots of images are listed as banned.
-# // TODO: this seems to leak memory when used a lot, investigate and fix, currently disabled
-# pub const AUDIT_IMAGE_COMPARE: bool = false;
-
-# lazy_static! {
-#     /// Number of Telegram API updates to process concurrently.
-#     pub static ref TELEGRAM_CONCURRENT_UPDATES: usize = num_cpus::get().max(2);
-
-#     /// Number of images to match at the same time.
-#     ///
-#     /// This is the maximum number of matches to run concurrently for each image against the list
-#     /// of banned image templates.
-#     pub static ref IMAGE_CONCURRENT_MATCHES: usize = num_cpus::get();
-# }
