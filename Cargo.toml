@@ -2,7 +2,7 @@
 name = "ban-binance-bot"
 description = "A Telegram bot to ban users advertising Binance promotions."
 version = "0.2.0"
-authors = ["timvisee <tim@visee.me>"]
+authors = ["timvisee <3a4fb3964f@sinenomine.email>"]
 edition = "2018"
 homepage = "https://gitlab.com/timvisee/ban-binance-bot"
 repository = "https://gitlab.com/timvisee/ban-binance-bot"
