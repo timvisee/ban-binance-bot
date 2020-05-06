@@ -2,11 +2,14 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate serde;
 
 #[cfg(feature = "sentry")]
 use std::env;
 
 use dotenv::dotenv;
+
 use state::State;
 
 mod bot;
@@ -36,7 +39,7 @@ async fn main() -> Result<(), UpdateError> {
     let state = match State::init().await {
         Ok(state) => state,
         Err(err) => {
-            error!("Failed to initialize bot state: {}", err);
+            error!("Failed to initialize bot state: {:?}", err);
             panic!();
         },
     };

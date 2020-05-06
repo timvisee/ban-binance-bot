@@ -1,103 +1,68 @@
-/// A list of illegal URL hosts.
-pub const ILLEGAL_HOSTS: [&str; 34] = [
-    "binance.bnbnetwork.icu",
-    "binance.bnbrelease.icu",
-    "binance.channelevent.icu",
-    "binance.dexexchange.icu",
-    "binance.dexexchange.site",
-    "binance.dexsupport.site",
-    "binance.dexsupports.icu",
-    "binance.event2019.site",
-    "binance.eventonline.icu",
-    "binance.exchangemarket.icu",
-    "binance.jerseylaunch.site",
-    "binance.jerseymx.site",
-    "binance.jerseyonline.icu",
-    "binance.jerseyonline.site",
-    "binance.jerseysolution.site",
-    "binance.marketjersey.icu",
-    "binance.marketrelease.icu",
-    "binance.mxevent.site",
-    "binance.webjersey.icu",
-    "event.bnbexchange.services",
-    "event.exchangelaunch.services",
-    "exchange.2019event.top",
-    "exchange.bnbdex.top",
-    "exchange.bnblaunch.com",
-    "exchange.bnblaunch.top",
-    "exchange.bnbproject.services",
-    "exchange.bnbsolutions.services",
-    "exchange.channelevent.top",
-    "exchange.dexmxjersey.services",
-    "exchange.jerseymx.services",
-    "exchange.jerseysolution.services",
-    "exchange.marketrelease.services",
-    "exchange.projectdex.services",
-    "mxevent.site",
-];
+use std::fs;
 
-/// A list of illegal URL host parts.
-pub const ILLEGAL_HOST_PARTS: [&str; 13] = [
-    "binance.bnb",
-    "binance.dex",
-    "binance.event",
-    "binance.exchange",
-    "binance.jersey",
-    "binance.market",
-    "exchange.2019e",
-    "exchange.bnb",
-    "exchange.channelevent",
-    "exchange.dexmx",
-    "exchange.projectdex",
-    "jerseyonline",
-    "jerseysolution",
-];
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    pub general: General,
+    pub scanner: Scanner,
+}
 
-/// A list of illegal text.
-pub const ILLEGAL_TEXT: [&str; 5] = [
-    "Celebrating Our New Crypto Exchange",
-    "Binance is pleased to announce the unmatched trading",
-    "To celebrate the launch of Binance US",
-    // "Event ends today!",
-    "First 5000 Participants Bonus",
-    "Only the first 5000 users will be rewarded",
-];
+impl Config {
+    /// Load the configuration from the given path.
+    pub fn from_path(path: &str) -> Result<Self, Error> {
+        toml::from_str(&fs::read_to_string(path).map_err(Error::Read)?).map_err(Error::Toml)
+    }
+}
 
-/// A list of illegal text in webpage bodies.
-pub const ILLEGAL_WEBPAGE_TEXT: [&str; 9] = [
-    "First 5000 Participants BTC Giveaway!",
-    "Celebrating the launch of our new Crypto Marketplace - Binance US",
-    "We are pleased to announce the unmatched trading technology platform of Binance to the United States and all of North America",
-    "To celebrate the launch of Binance US, we are rewarding the first 5000 participants with 10 times deposit bonus",
-    "In order to be eligible, participants must have a minimum of 0.02 BTC",
-    "Only the first 5000 users will be rewarded and it's on a first come first served basis. Qualifying users will receive the deposit bonus along with an invitation link to beta test Binance US. Every bug/hack/problem found on Binance US will be rewarded up to 10 BTC (more details upon sign-up).",
-    "For every BTC contributed, you will receive back 10 times more BTC!",
-    r#"<html><body><script type="text/javascript" src="/aes.js" ></script><script>function toNumbers(d){var e=[];d.replace(/(..)/g"#,
-    r#"&i=1";</script><noscript>This site requires Javascript to work, please enable Javascript in your browser or use a browser with Javascript support</noscript></body></html>"#,
-];
+#[derive(Debug)]
+pub enum Error {
+    /// Failed to read configuration from disk.
+    Read(std::io::Error),
+
+    /// Toml format error.
+    Toml(toml::de::Error),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct General {
+    pub notification_self_destruct: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Scanner {
+    pub text: Text,
+    pub web: Web,
+    pub image: Image,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Text {
+    pub text: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Web {
+    pub hosts: Vec<String>,
+    pub host_parts: Vec<String>,
+    pub text: Vec<String>,
+}
+
+// TODO: do not allow cloning this, use references
+#[derive(Debug, Deserialize, Clone)]
+pub struct Image {
+    // TODO: change to PathBuf?
+    pub dir: Option<String>,
+    pub threshold: f32,
+    pub text: Vec<String>,
+}
 
 /// A list of hosts for URLs that should be scanned if appearing on the webpage.
 pub const SCAN_WEBPAGE_URL_HOSTS: [&str; 4] = ["bit.ly", "t.cn", "t.co", "tinyurl.com"];
-
-/// A list of illegal text in images.
-#[cfg(feature = "ocr")]
-pub const ILLEGAL_IMAGE_TEXT: [&str; 3] = [
-    "EVENT ENDS AT MIDNIGHT TODAY",
-    "First 5000 Participants Bonus",
-    "Catherine Coley",
-];
-
-/// Directory containing all illegal images.
-pub const ILLEGAL_IMAGES_DIR: &str = "./res/illegal/";
 
 /// The maximum file size in bytes of files to check for legality.
 pub const MAX_FILE_SIZE: i64 = 100 * 1024 * 1024;
 
 /// The maximum file size in bytes of images to check for legality.
 pub const IMAGE_MAX_FILE_SIZE: i64 = 20 * 1024 * 1024;
-
-/// Images are illegal when their similarity to any template image is `<= threhold`.
-pub const IMAGE_BAN_THRESHOLD: f64 = 0.5;
 
 /// The minimum number of pixels each image side must have.
 ///

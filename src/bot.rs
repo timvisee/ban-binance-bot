@@ -324,19 +324,24 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
             MessageKind::Text { entities, .. } => {
                 let urls = util::url::find_hidden_urls(entities);
                 if !urls.is_empty() {
-                    checks.push(scanner::url::any_illegal_url(urls, 0).boxed());
+                    checks.push(
+                        scanner::url::any_illegal_url(&state.config().scanner.web, urls, 0).boxed(),
+                    );
                 }
             }
             _ => {}
         }
 
         // Scan the regular text
-        checks.push(scanner::text::is_illegal_text(text).boxed());
+        checks.push(scanner::text::is_illegal_text(&state.config().scanner, text).boxed());
     }
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.get_files() {
-        checks.push(scanner::file::has_illegal_files(files, state).boxed());
+        // TODO: do not clone state here
+        checks.push(
+            scanner::file::has_illegal_files(&state.config().scanner, files, state.clone()).boxed(),
+        );
     }
 
     select_true(checks).await

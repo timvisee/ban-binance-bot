@@ -35,9 +35,11 @@ regex = "1"
 reqwest = "0.10.0-alpha.1"
 rgb = "0.8"
 sentry = { version = "0.17", optional = true }
+serde = "1.0"
 tempfile = "3.1"
 tokio = "0.2.0-alpha.6"
 tokio-executor = "0.2.0-alpha.6"
+toml = "0.5"
 took = "0.1"
 url = "2.1"
 

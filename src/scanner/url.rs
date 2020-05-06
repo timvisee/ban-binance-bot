@@ -12,28 +12,33 @@ use crate::{
 /// Check whether the given text contains any illegal URLs.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub async fn contains_illegal_urls(text: &str) -> bool {
+pub async fn contains_illegal_urls(config: &Web, text: &str) -> bool {
     // Find URLs in the message, return if there are none
     let urls = util::url::find_urls(text);
     if urls.is_empty() {
         return false;
     }
 
-    any_illegal_url(urls, 0).await
+    any_illegal_url(config, urls, 0).await
 }
 
 /// Check whether the given list of URLs contains any illegal URL.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub fn any_illegal_url<'a, I>(urls: I, depth: usize) -> BoxFuture<'a, bool>
+pub fn any_illegal_url<'a, I>(config: &'a Web, urls: I, depth: usize) -> BoxFuture<'a, bool>
 where
     I: IntoIterator<Item = Url> + Send + 'a,
     I::IntoIter: Send,
 {
     async move {
         // Test each URL concurrently
-        select_true(urls.into_iter().map(|url| is_illegal_url(url, depth))).await
-    }.boxed()
+        select_true(
+            urls.into_iter()
+                .map(|url| is_illegal_url(config, url, depth)),
+        )
+        .await
+    }
+    .boxed()
 }
 
 /// Check whether the given URL is illegal.
@@ -43,21 +48,24 @@ where
 /// Returns `Ok` if the URL is illegal, `Err` otherwise.
 /// Errors are silently dropped and it will then be assumed that the URL is allowed.
 /// This allows the use of `futures::future::select_ok`.
-async fn is_illegal_url(mut url: Url, depth: usize) -> bool {
+async fn is_illegal_url(config: &Web, mut url: Url, depth: usize) -> bool {
     // The given URL must not be illegal
-    if is_illegal_static_url(&url) {
+    if is_illegal_static_url(config, &url) {
         return true;
     }
 
     // Follow URL redirects
     match util::url::follow_url(&url).await {
-        Ok(ref url) if is_illegal_static_url(url) => return true,
+        Ok(ref url) if is_illegal_static_url(config, url) => return true,
         Ok(new) => url = new,
-        Err(err) => debug!("Failed to follow URL redirects, could not audit, assuming safe: {:?}", err),
+        Err(err) => debug!(
+            "Failed to follow URL redirects, could not audit, assuming safe: {:?}",
+            err
+        ),
     }
 
     // Check whether the webpage contains illegal content
-    if url_has_illegal_webpage_content(&url, depth).await {
+    if url_has_illegal_webpage_content(config, &url, depth).await {
         warn!("Found illegal URL, webpage has illegal content: {}", url);
         return true;
     }
@@ -68,16 +76,19 @@ async fn is_illegal_url(mut url: Url, depth: usize) -> bool {
 /// Check whether the given URL routes to illegal content.
 ///
 /// This scans the body of the webpage that is responded with.
-async fn url_has_illegal_webpage_content(url: &Url, depth: usize) -> bool {
+async fn url_has_illegal_webpage_content(config: &Web, url: &Url, depth: usize) -> bool {
     // We must have illegal webpage text configured
-    if ILLEGAL_WEBPAGE_TEXT.is_empty() {
+    if config.text.is_empty() {
         return false;
     }
 
     // Build the URL client
     // TODO: use a global client instance
     let mut headers = header::HeaderMap::new();
-    headers.insert(header::COOKIE, header::HeaderValue::from_static("__test=bda194efef091b052793e3eb74b1b952; id=185"));
+    headers.insert(
+        header::COOKIE,
+        header::HeaderValue::from_static("__test=bda194efef091b052793e3eb74b1b952; id=185"),
+    );
     let client = Client::builder()
         .danger_accept_invalid_certs(true)
         .redirect(RedirectPolicy::limited(25))
@@ -92,22 +103,28 @@ async fn url_has_illegal_webpage_content(url: &Url, depth: usize) -> bool {
     let response = match client.get(url.as_str()).send().await {
         Ok(response) => response,
         Err(err) => {
-            debug!("Failed to request webpage content, could not audit, assuming safe: {}", err);
+            debug!(
+                "Failed to request webpage content, could not audit, assuming safe: {}",
+                err
+            );
             return false;
-        },
+        }
     };
 
     // Request the page body
     let body = match response.bytes().await {
         Ok(bytes) => bytes,
         Err(err) => {
-            warn!("Failed to receive webpage content, could not audit, assuming safe: {}", err);
+            warn!(
+                "Failed to receive webpage content, could not audit, assuming safe: {}",
+                err
+            );
             return false;
-        },
+        }
     };
 
     // Find the shortest needle to limit body searching
-    let needles = ILLEGAL_WEBPAGE_TEXT;
+    let needles = &config.text;
     let shortest = needles.iter().map(|t| t.len()).min().unwrap_or(0);
 
     // The body must be long enough
@@ -117,28 +134,36 @@ async fn url_has_illegal_webpage_content(url: &Url, depth: usize) -> bool {
     }
 
     // Scan body for needles to detect illegal content
-    let has_illegal_text = (0..=body.len() - shortest)
-        .any(|i| needles
+    let has_illegal_text = (0..=body.len() - shortest).any(|i| {
+        needles
             .iter()
             .filter(|needle| needle.as_bytes().len() <= body.len() - i)
-            .any(|needle| if &body[i..i + needle.len()] == needle.as_bytes() {
-                warn!("Webpage content matched (matched: {:?})", needle.chars().take(32).collect::<String>());
-                true
-            } else {
-                false
+            .any(|needle| {
+                if &body[i..i + needle.len()] == needle.as_bytes() {
+                    warn!(
+                        "Webpage content matched (matched: {:?})",
+                        needle.chars().take(32).collect::<String>()
+                    );
+                    true
+                } else {
+                    false
+                }
             })
-        );
+    });
     if has_illegal_text {
         return true;
     }
 
     // Audit any sketchy URLs from the webpage body as well
     if depth < MAX_DEPTH {
-        if any_illegal_url(find_page_urls(&body), depth + 1).await {
+        if any_illegal_url(config, find_page_urls(&body), depth + 1).await {
             return true;
         }
     } else {
-        warn!("Not scanning URLs on webpage conten, reached depth {}, assuming safe", depth);
+        warn!(
+            "Not scanning URLs on webpage conten, reached depth {}, assuming safe",
+            depth
+        );
     }
 
     false
@@ -147,9 +172,9 @@ async fn url_has_illegal_webpage_content(url: &Url, depth: usize) -> bool {
 /// Check wheher the given URL is illegal.
 ///
 /// This checks the static URL, and does not do any redirect checking.
-pub fn is_illegal_static_url(url: &Url) -> bool {
+pub fn is_illegal_static_url(config: &Web, url: &Url) -> bool {
     // We must have illegal hosts or parts configured
-    if ILLEGAL_HOSTS.is_empty() && ILLEGAL_HOST_PARTS.is_empty() {
+    if config.hosts.is_empty() && config.host_parts.is_empty() {
         return false;
     }
 
@@ -161,7 +186,8 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
     let host = host.trim().to_lowercase();
 
     // Match the URL against a list of banned hosts
-    if ILLEGAL_HOSTS
+    if config
+        .hosts
         .iter()
         .any(|illegal_host| illegal_host == &host)
     {
@@ -170,7 +196,8 @@ pub fn is_illegal_static_url(url: &Url) -> bool {
     }
 
     // Match the URL against a list of banned host parts
-    let illegal = ILLEGAL_HOST_PARTS
+    let illegal = config
+        .host_parts
         .iter()
         .any(|illegal_part| host.contains(illegal_part));
     if illegal {
