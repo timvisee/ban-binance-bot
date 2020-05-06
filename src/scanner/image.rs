@@ -8,14 +8,14 @@ use image::GenericImageView;
 use image::{imageops, FilterType};
 use tempfile::TempPath;
 
-use crate::{
-    config::{Scanner, Image},
-    // TODO: replace this
-    config::{AUDIT_IMAGE_COMPARE, IMAGE_MIN_SIZE, IMAGE_CONCURRENT_MATCHES},
-    util::{self, future::select_true},
-};
 #[cfg(feature = "ocr")]
 use crate::scanner;
+use crate::{
+    config::{Image, Scanner},
+    // TODO: replace this
+    config::{AUDIT_IMAGE_COMPARE, IMAGE_CONCURRENT_MATCHES, IMAGE_MIN_SIZE},
+    util::{self, future::select_true},
+};
 
 /// Check whether the given image is illegal.
 pub async fn is_illegal_image(config: &Scanner, path: Arc<TempPath>) -> bool {
@@ -45,14 +45,16 @@ async fn has_illegal_text(config: &Scanner, path: Arc<TempPath>) -> bool {
         Err(_) => {
             warn!("Failed to read text from image, could not audit, assuming safe");
             return false;
-        },
+        }
     };
 
     // Trim and lowercase
     let text = text.trim().to_lowercase();
 
     // Match the image against illegal image text
-    let illegal = config.image.text
+    let illegal = config
+        .image
+        .text
         .iter()
         .any(|illegal_text| text.contains(&illegal_text.to_lowercase()));
     if illegal {
@@ -71,21 +73,24 @@ async fn has_illegal_text(config: &Scanner, path: Arc<TempPath>) -> bool {
 ///
 /// True is returned if the image is illegal, false if not.
 /// On error, false is returned as it is assumed the image is allowed.
-async fn matches_illegal_template<'a>(config: &'a Image, path: Arc<TempPath>) -> bool {
+async fn matches_illegal_template(config: &Image, path: Arc<TempPath>) -> bool {
     // The image dir must be set
     let image_dir = match config.dir {
-        Some(dir) => dir,
+        Some(ref dir) => dir.clone(),
         None => {
             warn!("Attempt to audit image by matching, but not image directory is set");
             return false;
-        },
+        }
     };
 
     // Create a directory reader to list all image templates
     let read_dir = match tokio::fs::read_dir(image_dir).await {
         Ok(read_dir) => read_dir,
         Err(err) => {
-            warn!("Failed to list illegal image templates, could not audit, assuming safe: {}", err);
+            warn!(
+                "Failed to list illegal image templates, could not audit, assuming safe: {}",
+                err
+            );
             return false;
         }
     };
@@ -102,7 +107,7 @@ async fn matches_illegal_template<'a>(config: &'a Image, path: Arc<TempPath>) ->
                         .ok(),
                 )
             })
-            .map(|template_path| {
+            .map(move |template_path| {
                 let path = path.clone();
                 let config = config.clone();
                 tokio_executor::blocking::run(move || match_image(config, path, template_path.path())).boxed()
@@ -117,7 +122,7 @@ async fn matches_illegal_template<'a>(config: &'a Image, path: Arc<TempPath>) ->
 /// Check whether the images at the given two paths match.
 ///
 /// This operation is expensive.
-fn match_image(config: &Image, path: Arc<TempPath>, template_path: PathBuf) -> bool {
+fn match_image(config: Image, path: Arc<TempPath>, template_path: PathBuf) -> bool {
     debug!(
         "Matching illegal template '{}' against '{}'...",
         template_path
@@ -131,7 +136,10 @@ fn match_image(config: &Image, path: Arc<TempPath>, template_path: PathBuf) -> b
     let image = match image::open(path.as_ref()) {
         Ok(image) => image,
         Err(err) => {
-            warn!("Failed to open image, could not audit, assuming safe: {}", err);
+            warn!(
+                "Failed to open image, could not audit, assuming safe: {}",
+                err
+            );
             return false;
         }
     };
@@ -161,11 +169,14 @@ fn match_image(config: &Image, path: Arc<TempPath>, template_path: PathBuf) -> b
 
     // Compare the images, obtain the score
     let result = dssim.compare(&template_image, image);
-    let score = result.0;
-    let is_similar = score <= config.threshold;
+    let score: f64 = result.0.into();
+    let is_similar = score as f32 <= config.threshold;
 
     if is_similar {
-        warn!("Found illegal image, matches banned template (score: {})", score);
+        warn!(
+            "Found illegal image, matches banned template (score: {})",
+            score
+        );
     } else {
         trace!("Matched image is legal (score: {})", score);
     }

@@ -25,7 +25,7 @@ pub async fn contains_illegal_urls(config: &Web, text: &str) -> bool {
 /// Check whether the given list of URLs contains any illegal URL.
 ///
 /// This uses `ILLEGAL_HOSTS`.
-pub fn any_illegal_url<'a, I>(config: &Web, urls: I, depth: usize) -> BoxFuture<'a, bool>
+pub fn any_illegal_url<'a, I>(config: &'a Web, urls: I, depth: usize) -> BoxFuture<'a, bool>
 where
     I: IntoIterator<Item = Url> + Send + 'a,
     I::IntoIter: Send,
@@ -156,7 +156,7 @@ async fn url_has_illegal_webpage_content(config: &Web, url: &Url, depth: usize) 
 
     // Audit any sketchy URLs from the webpage body as well
     if depth < MAX_DEPTH {
-        if any_illegal_url(find_page_urls(&body), depth + 1).await {
+        if any_illegal_url(config, find_page_urls(&body), depth + 1).await {
             return true;
         }
     } else {

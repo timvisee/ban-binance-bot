@@ -3,7 +3,6 @@ use std::fs;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub general: General,
-
     pub scanner: Scanner,
 }
 
@@ -47,7 +46,8 @@ pub struct Web {
     pub text: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+// TODO: do not allow cloning this, use references
+#[derive(Debug, Deserialize, Clone)]
 pub struct Image {
     // TODO: change to PathBuf?
     pub dir: Option<String>,
