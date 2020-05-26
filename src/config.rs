@@ -73,7 +73,7 @@ pub const IMAGE_MIN_SIZE: u32 = 80;
 ///
 /// This manages how deep this bot will go with scanning URLs on webpages recursively.
 /// Following many URL redirects counts as 1 depth.
-pub const MAX_DEPTH: usize = 4;
+pub const MAX_DEPTH: usize = 3;
 
 /// When auditing, compare images against banned database.
 ///
