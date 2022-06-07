@@ -319,6 +319,13 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
 
     // Check message text
     if let Some(text) = msg.text() {
+        trace!(
+            "TEXT {}/{}: {}",
+            util::telegram::format_chat_name_log(&msg.chat),
+            util::telegram::format_user_name_log(&msg.from),
+            text,
+        );
+
         // Scan any hidden URLs
         match &msg.kind {
             MessageKind::Text { entities, .. } => {
@@ -338,6 +345,13 @@ async fn is_illegal_message(msg: Message, state: State) -> bool {
 
     // Check message files (pictures, stickers, files, ...)
     if let Some(files) = msg.get_files() {
+        trace!(
+            "FILE {}/{}: {} file(s)",
+            util::telegram::format_chat_name_log(&msg.chat),
+            util::telegram::format_user_name_log(&msg.from),
+            files.len(),
+        );
+
         // TODO: do not clone state here
         checks.push(
             scanner::file::has_illegal_files(&state.config().scanner, files, state.clone()).boxed(),
